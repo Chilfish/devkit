@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 安全问题
-    url: https://github.com/Chilfish/starter-ts-lib/security/advisories/new
-    about: 请勿公开提交安全漏洞，使用 GitHub Security Advisories。
-  - name: 使用问题
-    url: https://github.com/Chilfish/starter-ts-lib/discussions
-    about: 使用与配置相关问题优先开 Discussions。
+  - name: Security issue
+    url: https://github.com/Chilfish/devkit/security/advisories/new
+    about: Do not report vulnerabilities publicly; use GitHub Security Advisories.
+  - name: Usage question
+    url: https://github.com/Chilfish/devkit/discussions
+    about: Ask usage and configuration questions in Discussions.

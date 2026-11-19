@@ -1,44 +1,79 @@
-# 快速开始
+# Getting started
 
-## 环境要求
+## Requirements
 
-| 工具 | 版本 | 用途 |
+| Tool | Version | Purpose |
 |---|---|---|
-| Bun | 1.4.4+ | 安装依赖、运行脚本、本地开发 |
-| Node.js | 20+ | 运行时（`engines.node`） |
+| Bun | 1.4.4+ | Install, scripts, local development, proxy runtime |
+| Node.js | 22.22+ | CLI and local service orchestration |
 | Git | 2.4+ | lefthook hooks |
 
-Bun 版本锁定在 `package.json#packageManager`，CI 使用同版本。
+Bun is pinned in `package.json#packageManager`; CI uses the same version.
 
-## 初始化
-
-```bash
-git clone git@github.com:Chilfish/starter-ts-lib.git my-lib
-cd my-lib
-bun install
-```
-
-`bun install` 会自动执行 `prepare: lefthook install`，安装 Git hooks。
-
-## 改成你的项目
-
-1. 修改 `package.json`：`name`、`description`、`repository`、`homepage`、`bugs`、`keywords`。
-2. 修改 `README.md` 标题与安装命令。
-3. 替换 `src/index.ts` 的占位导出，并同步 `tests/index.test.ts`。
-4. 更新 `LICENSE.md` 的版权信息。
-5. 更新 `CHANGELOG.md`，清空模板内容。
-6. npm 上创建包并配置 Trusted Publisher（见 [build-and-release](../engineering/build-and-release.md)）。
-
-## 第一条命令
+## Install
 
 ```bash
-bun run check
+bun add -d @chilfish/devkit
 ```
 
-它依次执行 typecheck、lint、测试覆盖率、构建、产物校验。全绿即表示脚手架可用。
+Install `pg` and `drizzle-orm` as well when you use the local database stack.
 
-## 下一步
+## Write the config
 
-- 日常命令与发布流程：[usage.md](./usage.md)
-- 架构与目录约定：[architecture.md](../engineering/architecture.md)
-- 代码风格：[code-style.md](../engineering/code-style.md)
+```ts
+// dev.config.ts
+import { defineDevkit } from '@chilfish/devkit'
+
+export const devkit = defineDevkit({
+  identity: { name: 'ymmt', description: 'Data pipeline', helpHint: 'bun run ymmt' },
+  env: { file: '.dev.vars' },
+  database: {
+    localUrl: 'postgres://postgres@localhost:5432/ymmt_dev',
+    proxyEndpoint: 'http://127.0.0.1:4444/sql',
+    migrations: 'drizzle',
+  },
+  storage: { bucket: 'yumemita-data', publicBaseEnv: 'PUBLIC_R2_BASE' },
+  paths: { logs: 'temp' },
+  dev: { servers: [{ name: 'astro', runtime: 'node', command: 'astro', args: ['dev'] }] },
+})
+```
+
+`defineDevkit` validates and freezes the object. It does not read files, write `process.env` or print anything.
+
+## Wire up the CLI
+
+```ts
+import { buildCli, runCli } from '@chilfish/devkit/cli'
+import { createDevCommands } from '@chilfish/devkit/commands'
+import { devkit } from './dev.config'
+
+const groups = [createDevCommands(devkit)]
+
+await runCli(
+  buildCli({ config: devkit, version: '1.0.0', groups }),
+  process.argv.slice(2),
+)
+```
+
+Add project-specific commands as `CommandGroup`s and pass them through `groups`; top-level commands go through `rootCommands`.
+
+## Environment file
+
+The env module reads `env.file` and fills only keys missing from the process environment.
+
+- With the local flag on, `DATABASE_URL`, `NEON_HTTP_ENDPOINT` and the configured public base are forced to local values.
+- With the local flag off, `<KEY>_ONLINE` values are expanded into `<KEY>`.
+- Explicit process variables always win.
+
+## First run
+
+```bash
+LOCAL=1 bun run dev db     # start Postgres, create the database, migrate
+bun run dev server         # start the local stack and the configured servers
+```
+
+## Next steps
+
+- [Local development](./local-dev.md)
+- [CLI contract](./cli.md)
+- [Configuration reference](../reference/config.md)

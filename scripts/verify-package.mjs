@@ -1,10 +1,10 @@
 /**
- * 校验发布产物：
- * - 必需的 dist 文件存在
- * - 打出的 tarball 不包含源码/测试/配置
- * - exports 指向的文件真实存在
+ * Validate the published artifact:
+ * - required dist files exist
+ * - every `exports` target exists
+ * - the packed tarball excludes source, tests and config
  *
- * 运行前必须先 `bun run build`。
+ * Run `bun run build` first.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -34,7 +34,7 @@ for (const target of collectTargets(pkg.exports)) {
   if (!target.startsWith('./'))
     continue
   if (!existsSync(new URL(`..${target.slice(1)}`, import.meta.url)))
-    fail(`exports 指向的文件不存在: ${target}`)
+    fail(`exports target does not exist: ${target}`)
 }
 
 for (const file of [
@@ -42,9 +42,24 @@ for (const file of [
   'dist/index.cjs',
   'dist/index.d.ts',
   'dist/index.d.cts',
+  'dist/shared/index.js',
+  'dist/shared/index.cjs',
+  'dist/cli/index.js',
+  'dist/cli/index.cjs',
+  'dist/env/index.js',
+  'dist/env/index.cjs',
+  'dist/local/index.js',
+  'dist/local/index.cjs',
+  'dist/proxy/index.js',
+  'dist/proxy/index.cjs',
+  'dist/storage/index.js',
+  'dist/storage/index.cjs',
+  'dist/commands/index.js',
+  'dist/commands/index.cjs',
+  'dist/bin/proxy.js',
 ]) {
   if (!existsSync(new URL(`../${file}`, import.meta.url)))
-    fail(`缺少构建产物: ${file}`)
+    fail(`missing build artifact: ${file}`)
 }
 
 let packInfo
@@ -55,7 +70,7 @@ try {
     '--json',
     '--ignore-scripts',
   ]
-  // Windows 上 npm 是 .cmd，execFile 无法直接执行，需经 cmd.exe。
+  // On Windows npm is a .cmd file, which execFile cannot run directly.
   const output = process.platform === 'win32'
     ? execFileSync('cmd.exe', [
         '/d',
@@ -75,7 +90,7 @@ try {
   packInfo = JSON.parse(output)[0]
 }
 catch (error) {
-  fail(`npm pack --dry-run 失败: ${error.message}`)
+  fail(`npm pack --dry-run failed: ${error.message}`)
 }
 
 if (packInfo) {
@@ -88,24 +103,25 @@ if (packInfo) {
     'dist/index.cjs',
     'dist/index.d.ts',
     'dist/index.d.cts',
+    'dist/bin/proxy.js',
   ]
 
   for (const file of required) {
     if (!files.has(file))
-      fail(`tarball 缺少必需文件: ${file}`)
+      fail(`tarball is missing a required file: ${file}`)
   }
 
   for (const file of files) {
     if (file.startsWith('src/') || file.startsWith('tests/') || file.startsWith('scripts/') || file.startsWith('docs/') || file.startsWith('examples/'))
-      fail(`tarball 不应包含: ${file}`)
+      fail(`tarball must not include: ${file}`)
   }
 }
 
 if (failures.length > 0) {
-  console.error('verify-package 失败:')
+  console.error('verify-package failed:')
   for (const message of failures)
     console.error(`  - ${message}`)
   process.exit(1)
 }
 
-console.log(`verify-package 通过（${packInfo.files.length} 个文件）`)
+console.log(`verify-package passed (${packInfo?.files.length ?? 0} files)`)

@@ -1,35 +1,35 @@
-# 开发日志
+# Development log
 
-按日期记录当天完成的工作，文件名 `YYYY-MM-DD.md`。
+Record the day's work as `YYYY-MM-DD.md`.
 
-## 何时写
+## When to write
 
-- 不属于「三类必写文档」（公开契约 / 构建发布 / 事故修复）的改动。
-- 决策过程、排查过程、被否决的方案。
-- 大改动的中间状态，方便下次接续。
+- Changes outside the three mandatory document types (public contract / build and release / incident).
+- Decision and debugging processes, rejected approaches.
+- Intermediate states of large changes, so the next session can continue.
 
-## 格式
+## Format
 
 ```md
 # 2026-11-18
 
-## 完成
+## Done
 
-- 迁移到 tsdown + bun
-- 新增 docs 体系与 check:docs 门禁
+- Migrated to tsdown + Bun
+- Added docs system and check:docs gate
 
-## 决策
+## Decisions
 
-- 发布不走 NPM_TOKEN：改用 OIDC，减少长期凭据
+- Release uses OIDC instead of NPM_TOKEN to avoid long-lived secrets
 
-## 待办
+## Follow-ups
 
-- 补充 examples/api 场景
-- 评估是否需要 changesets
+- Add an examples/api scenario
+- Evaluate changesets
 ```
 
-## 约定
+## Conventions
 
-- 日志不参与门禁，不必追求完整。
-- 涉及公开契约或事故的内容同时写入正式文档，日志只做指针。
-- 本目录不在 `docs/README.md` 逐篇登记（`check-docs` 已豁免）。
+- Logs are not part of the gate and need not be complete.
+- Anything touching a public contract or an incident also goes into a formal document; the log only links to it.
+- This directory is exempt from the `docs/README.md` index check.

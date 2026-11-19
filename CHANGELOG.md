@@ -1,23 +1,31 @@
 # Changelog
 
-本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [SemVer](https://semver.org/lang/zh-CN/)。
+This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [SemVer](https://semver.org/).
 
 ## Unreleased
 
-### 变更
+## 0.1.0
 
-- 构建工具从 unbuild 迁移到 tsdown，产出 ESM + CJS 双格式与独立类型声明。
-- 包管理器从 pnpm 切换到 Bun，锁文件为 `bun.lock`。
-- CI/发布流水线改用真实存在的 action 版本，发布走 OIDC + provenance。
-- 使用 lefthook 接管 Git hooks：pre-commit 对暂存文件执行 `eslint --fix`，pre-push 构建。
-- 修复 `exports` 条件类型、`engines`、`publishConfig` 等元数据。
-- 测试迁移到 `tests/`，增加导出面契约测试与覆盖率配置。
-- 新增 `docs/` 文档体系、`AGENTS.md`、`CHANGELOG.md`。
-- 新增开箱即用基建：`examples/`、`scripts/verify-package.mjs`、`scripts/verify-release-tag.mjs`、`scripts/check-docs.mjs`。
-- 新增社区文件：`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、Issue/PR 模板、`.editorconfig`、`.nvmrc`、Dependabot。
-- CI 增加产物校验、文档校验、示例运行与覆盖率上传；发布增加 registry 轮询。
+### Added
 
-### 修复
+- `defineDevkit`: validated, deeply frozen configuration with identity, env, database, storage, paths and dev-server sections.
+- `./shared`: pure URL checks, env content parsing, upsert that preserves line order, local address derivation.
+- `./cli`: `CommandSpec` / `CommandGroup` / `CommandContext`, `buildCli`, `runCli`, `describeCli`, JSON envelope, fixed exit codes (0/1/2/3) and a stderr-only logger.
+- `./env`: env file loading with process-environment precedence, `LOCAL` handling, `*_ONLINE` expansion and a credential-free banner.
+- `./local`: Postgres discovery and startup, database creation, drizzle migrations, env-file sync, background `/sql` proxy management, and `ensureDevServices`.
+- `./proxy`: Neon-compatible `/sql` handler plus `Bun.serve` wrapper; `/health` reports pid, host, database and counters.
+- `./storage`: SILO / MinIO discovery and startup, bucket creation and anonymous read policy via `aws4fetch`.
+- `./commands`: built-in `dev server`, `dev db`, `dev proxy` and `dev storage` commands driven by configuration.
+- `./bin/proxy`: background proxy entry, resolved by absolute path inside the package.
 
-- CI 的 Node 20 job 不再执行构建（tsdown 要求 Node ≥22），改为消费 `dist` artifact 验证运行时。
-- Dependabot 忽略 `typescript >=7`，`typescript-eslint` 尚不支持该版本。
+### Changed
+
+- Package is published as `@chilfish/devkit` with eight typed subpath entries plus `./bin/proxy`.
+- `engines.node` is now `>=22.22`.
+- `commander` and `aws4fetch` are runtime dependencies; `pg` and `drizzle-orm` are optional peers.
+
+### Known limitations
+
+- The proxy is Bun-only (`Bun.serve`); Node support is an open question.
+- `dev server` forwards `--` arguments to the first configured server only.
+- Remote object-storage resolution (R2 credentials, CDN prefixes) stays in consuming projects.

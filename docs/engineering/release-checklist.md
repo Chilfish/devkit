@@ -1,15 +1,15 @@
-# 发版检查表
+# Release checklist
 
-按顺序逐项确认，任何一项失败都停下修复，不要跳步。
+Follow in order. Stop and fix on any failure.
 
-## 发版前
+## Before release
 
-- [ ] `main` 上工作区干净，与 `origin/main` 一致
-- [ ] `CHANGELOG.md` 的 `## Unreleased` 已写全本版变化
-- [ ] 破坏性变更已在 CHANGELOG 与文档中标注
-- [ ] 公开导出面变化已更新 `tests/exports.test.ts`
+- [ ] `main` is clean and matches `origin/main`
+- [ ] `CHANGELOG.md` `## Unreleased` covers every change in this release
+- [ ] Breaking changes are called out in the CHANGELOG and docs
+- [ ] Public export changes are reflected in `tests/exports.test.ts`
 
-## 本地门禁
+## Local gate
 
 ```bash
 bun install --frozen-lockfile
@@ -17,24 +17,24 @@ bun run check
 bun run check:docs
 ```
 
-- [ ] 全部通过
-- [ ] `dist/` 下存在 `index.js` / `index.cjs` / `index.d.ts` / `index.d.cts`
-- [ ] `bun run verify:package` 通过
-- [ ] 本地 `node -e "require('./dist/index.cjs')"` 与 ESM 导入均成功
+- [ ] All green
+- [ ] Every entry exists under `dist/` (`index`, `shared/index`, `cli/index`, `env/index`, `local/index`, `proxy/index`, `storage/index`, `commands/index`, `bin/proxy.js`)
+- [ ] `bun run verify:package` passes
+- [ ] `node -e "require('./dist/index.cjs')"` and the ESM import both succeed
 
-## 发版
+## Release
 
 ```bash
 bun run release
 ```
 
-- [ ] `bumpp` 完成版本升级、提交与 tag
-- [ ] tag 已推送（`git push --follow-tags`）
-- [ ] GitHub Actions `Publish` 通过
-- [ ] npm 上可以 `npm view <pkg>@<version>` 查到
-- [ ] 创建 GitHub Release，notes 取自 CHANGELOG 对应版本节
+- [ ] bumpp bumped the version, committed and tagged
+- [ ] Tag pushed (`git push --follow-tags`)
+- [ ] GitHub Actions `Publish` passes
+- [ ] `npm view @chilfish/devkit@<version>` resolves
+- [ ] GitHub Release created from the CHANGELOG section
 
-## 回滚
+## Rollback
 
-- 已发布版本不可撤下时，发布新的 patch 版本修复，不覆盖已有版本。
-- 需要废弃版本时使用 `npm deprecate`，并说明替代版本。
+- Published versions are immutable: ship a patch instead of overwriting.
+- Deprecate broken versions with `npm deprecate` and name the replacement.

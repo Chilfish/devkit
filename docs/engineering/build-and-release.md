@@ -1,61 +1,67 @@
-# 构建与发布
+# Build and release
 
-## 构建
+## Build
 
-工具：**tsdown**（rolldown 内核），配置见 `tsdown.config.ts`。
+Tool: **tsdown** (rolldown), configured in `tsdown.config.ts`.
 
-| 项 | 取值 | 理由 |
+| Item | Value | Reason |
 |---|---|---|
-| `entry` | `src/index.ts` | 单入口，子路径入口需显式追加 |
-| `format` | `esm` + `cjs` | 同时兼容 `import` 与 `require` |
-| `dts` | `true` | 生成 `index.d.ts` / `index.d.cts` |
-| `platform` | `neutral` | 不绑定 Node，浏览器/Edge 可消费 |
-| `target` | `es2022` | 现代语法，避免过度降级 |
-| `neverBundle` | `/^node:/` | neutral 平台不解析 Node 内置模块 |
-| `exports` | `false` | `package.json#exports` 手工维护，构建不得改写 |
+| `entry` | four target groups | Neutral, Node and Bun boundaries stay in separate bundles |
+| `format` | `esm` + `cjs` | Both `import` and `require` work |
+| `dts` | `true` (except `./bin/proxy`) | Typed entries |
+| `platform` | `neutral` / `node` per target | Prevents accidental Node builtins in neutral code |
+| `outExtensions` | `.js` / `.cjs`, `.d.ts` / `.d.cts` | Matches `package.json#exports` |
+| `exports` | `false` | `package.json#exports` is maintained by hand |
 
-产物契约：
+Artifacts:
 
 ```
-dist/index.js      ESM
-dist/index.cjs     CJS
-dist/index.d.ts    ESM 类型
-dist/index.d.cts   CJS 类型
+dist/index.js                 dist/index.cjs
+dist/shared/index.js          dist/shared/index.cjs
+dist/cli/index.js             dist/cli/index.cjs
+dist/env/index.js             dist/env/index.cjs
+dist/local/index.js           dist/local/index.cjs
+dist/proxy/index.js           dist/proxy/index.cjs
+dist/storage/index.js         dist/storage/index.cjs
+dist/commands/index.js        dist/commands/index.cjs
+dist/bin/proxy.js
 ```
 
-CI 会在 build 后校验这四个文件存在，并分别在 Node 20/22/24 下导入验证；`bun run verify:package` 还会检查 tarball 文件清单，确保源码、测试、脚本不会被打进发布包。
+Type declarations mirror each entry. Shared chunks are emitted with hashed names.
 
-## package.json 契约
+CI checks the entry artifacts after building; `bun run verify:package` validates the tarball and every `exports` target.
 
-- `exports["."]` 必须是 `import` / `require` 各自带 `types` 的条件对象。
-- `files` 只包含 `dist`、`LICENSE.md`、`README.md`。
-- `sideEffects: false`，保证 tree-shaking。
-- `engines.node` 与 CI 矩阵下限保持一致。
-- `publishConfig.provenance: true`，发布时附带来源证明。
+## package.json contract
 
-`tests/exports.test.ts` 锁定上述形状，改动导出面必须先改测试。
+- Each entry is a condition object with `types` before `default`.
+- `files` contains only `dist`, `LICENSE.md` and `README.md`.
+- `sideEffects: false`.
+- `engines.node` matches the CI floor.
+- `publishConfig.provenance: true`.
 
-## 发布链路
+See [package-contract](../reference/package-contract.md).
 
-1. 更新 `CHANGELOG.md` 的 `## Unreleased`，写清本版变化。
-2. `bun run release` → `bumpp` 升级版本、提交、打 tag、推送。
-3. tag 推送触发 `.github/workflows/publish.yml`：
-   - 校验 tag 与 `package.json#version` 一致
-   - 校验 `CHANGELOG.md` 存在 `## <version>` 节
-   - typecheck / lint:check / test / build
+## Release flow
+
+1. Fill `CHANGELOG.md` under `## Unreleased`.
+2. `bun run release` → bumpp bumps the version, commits, tags and pushes.
+3. The tag triggers `.github/workflows/publish.yml`:
+   - verify the tag matches `package.json#version`
+   - verify `CHANGELOG.md` has a `## <version>` section
+   - run typecheck / lint / test / build / package verification
    - `npm publish --provenance --access public`
-4. 发布后再创建 GitHub Release（可复用 CHANGELOG 该节作为 notes）。
+4. Create a GitHub Release from the CHANGELOG section.
 
-## 认证
+## Authentication
 
-使用 **npm Trusted Publisher（OIDC）**，不配置 `NPM_TOKEN`：
+npm Trusted Publisher (OIDC); no `NPM_TOKEN`:
 
-- workflow 需要 `permissions.id-token: write`。
-- `setup-node` 刻意**不设置** `registry-url`，避免写入占位 token 的 `.npmrc`。
-- 首次发布前在 npm 包设置中绑定本仓库与本 workflow。
+- workflow needs `permissions.id-token: write`;
+- `setup-node` deliberately omits `registry-url`, which would write a placeholder token;
+- bind the repository and workflow in the npm package settings before the first publish.
 
-## 禁止
+## Forbidden
 
-- 本地直接 `npm publish`（绕过门禁）。
-- 在 `tsdown.config.ts` 中开启 `exports: true`（会改写手工维护的 exports）。
-- 发布前不更新 CHANGELOG（CI 会直接失败）。
+- Publishing locally with `npm publish` (bypasses gates).
+- Enabling `exports: true` in `tsdown.config.ts`.
+- Releasing without a CHANGELOG entry (CI fails).

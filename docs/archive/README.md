@@ -1,10 +1,10 @@
-# 归档
+# Archive
 
-已失效但仍需保留检索价值的文档移入本目录。
+Superseded documents that still carry historical value live here.
 
-## 规则
+## Rules
 
-- 归档文件保留原文件名，并在顶部加一行：`> 已归档：<日期>，原因：<原因>`。
-- 主文档不再链接归档内容；如需引用，直接说明结论。
-- `docs/README.md` 不逐篇登记归档文件。
-- 归档不是删除：确认无人依赖后才可以移出仓库。
+- Keep the original filename and add one line at the top: `> Archived: <date>, reason: <reason>`.
+- Main documents no longer link to archived content; state the conclusion directly instead.
+- `docs/README.md` does not list archived files individually.
+- Archiving is not deleting: only remove from the repository once nothing references it.

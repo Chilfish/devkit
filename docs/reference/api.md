@@ -1,43 +1,83 @@
-# 公开 API
+# Public API
 
-当前脚手架只有占位 API，替换 `src/index.ts` 后请同步更新本文。
+Eight typed entries plus one executable entry. `package.json#exports` and `tests/exports.test.ts` lock this matrix.
 
-## 导出面
+## Entries
+
+| Entry | Exports | Platform |
+|---|---|---|
+| `@chilfish/devkit` | `defineDevkit`, `DevkitConfig`, `DevkitConfigError`, pure helpers | neutral |
+| `@chilfish/devkit/shared` | `isLocalUrl`, `isLocalMode`, `parseEnvContent`, `upsertEnvValues`, `localPublicBase`, `localEndpoint`, `localBucket`, `parseDatabaseInfo` | neutral |
+| `@chilfish/devkit/cli` | `CommandSpec`, `CommandGroup`, `CommandContext`, `buildCli`, `runCli`, `describeCli`, `createLogger`, envelope and exit helpers | node |
+| `@chilfish/devkit/env` | `loadEnvFile`, `describeEnvironment`, `readEnvFile` | node |
+| `@chilfish/devkit/local` | `ensureDevServices`, Postgres / database / migration / env-file / proxy helpers | node |
+| `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy` | Bun |
+| `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
+| `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand` | node |
+| `@chilfish/devkit/bin/proxy` | Executable background proxy entry | Bun |
+
+## Root
 
 ```ts
-export const one = 1
-export const two = 2
+import { defineDevkit } from '@chilfish/devkit'
+
+const config = defineDevkit({ /* see config reference */ })
 ```
 
-| 导出 | 类型 | 说明 |
-|---|---|---|
-| `one` | `1` | 占位常量 |
-| `two` | `2` | 占位常量 |
+The root entry does not read files, touch `process.env` or print. It is safe for Workers and browsers.
 
-## 入口
+## Shared
 
-| 入口 | 产物 | 适用 |
-|---|---|---|
-| `import { one } from 'starter-ts-lib'` | `dist/index.js` | ESM |
-| `const { one } = require('starter-ts-lib')` | `dist/index.cjs` | CJS |
+`shared` is pure: no `node:*` or `bun:*` imports, no side effects.
 
-两种入口的公开 API 完全一致，类型声明分别为 `index.d.ts` / `index.d.cts`。
+```ts
+import { isLocalMode, isLocalUrl } from '@chilfish/devkit/shared'
+```
 
-## 契约
+## CLI
 
-- 只提供具名导出，没有默认导出。
-- 运行时零依赖，不访问网络、文件系统或全局状态。
-- 导出面变化属于公开契约变更，必须：
-  1. 更新本文件与 `README.md`
-  2. 更新 `tests/exports.test.ts`
-  3. 在 `CHANGELOG.md` 标注，破坏性变更需说明迁移方式
+```ts
+import { buildCli, runCli } from '@chilfish/devkit/cli'
+```
 
-## 扩展子路径
+`buildCli({ config, version, groups, rootCommands })` returns a commander `Command`; `runCli(program, argv)` runs it and normalizes help/version/argument errors.
 
-新增 `./node` 这类入口时：
+## Env
 
-1. 增加 `src/node.ts`
-2. 在 `tsdown.config.ts` 的 `entry` 中加入
-3. 在 `package.json#exports` 中声明 `import` / `require` 各自带 `types`
-4. 在 `tests/exports.test.ts` 增加断言
-5. 在本文与 [package-contract](./package-contract.md) 登记
+```ts
+import { loadEnvFile, describeEnvironment } from '@chilfish/devkit/env'
+```
+
+## Local
+
+```ts
+import { ensureDevServices } from '@chilfish/devkit/local'
+const { databaseUrl, endpoint } = await ensureDevServices({ config })
+```
+
+## Proxy
+
+```ts
+import { createProxyHandler, startProxy } from '@chilfish/devkit/proxy'
+```
+
+`createProxyHandler({ databaseUrl })` returns a request handler plus `close()`. `startProxy({ databaseUrl, port })` wraps it with `Bun.serve` and returns `{ url, port, close }`.
+
+## Storage
+
+```ts
+import { ensureSiloRunning, ensureLocalBucket } from '@chilfish/devkit/storage'
+```
+
+## Commands
+
+```ts
+import { createDevCommands } from '@chilfish/devkit/commands'
+const devGroup = createDevCommands(config)
+```
+
+## Contract rules
+
+- Named exports only; no default export.
+- Adding or removing an entry is a public contract change: update `tests/exports.test.ts`, this document and the CHANGELOG.
+- `pg` and `drizzle-orm` are only loaded when local database work runs.

@@ -1,46 +1,46 @@
-# 贡献指南
+# Contributing
 
-感谢参与。提交前请先读 [docs/README.md](./docs/README.md) 与 [AGENTS.md](./AGENTS.md)。
+Thanks for contributing. Read [docs/README.md](./docs/README.md) and [AGENTS.md](./AGENTS.md) first.
 
-## 开发流程
+## Development flow
 
 ```bash
 bun install
 bun run check        # typecheck + lint + test:coverage + build + verify:package
-bun run check:docs   # 文档链接与索引校验
+bun run check:docs   # documentation links and index
 ```
 
-## 分支与提交
+## Branches and commits
 
-- 从 `main` 拉短分支：`feat/<scope>`、`fix/<scope>`、`docs/<scope>`。
-- Conventional Commits：`type(scope): 简短中文摘要`。
-- pre-commit 自动 `eslint --fix`，pre-push 自动 `build`。
+- Branch from `main`: `feat/<scope>`, `fix/<scope>`, `docs/<scope>`.
+- Conventional Commits: `type(scope): short summary`.
+- pre-commit runs `eslint --fix`; pre-push runs `build`.
 
-## 代码要求
+## Code requirements
 
-- 具名导出，禁止 `export default`。
-- 类型导入使用 `import type`。
-- 禁止 `any`。
-- 新增逻辑必须带测试；修 bug 先补复现用例。
-- 不改无关代码，不做顺手的重构。
+- Named exports only; no `export default`.
+- Use `import type` for types.
+- No `any`.
+- New logic needs tests; bug fixes start with a failing test.
+- Do not touch unrelated code or perform drive-by refactors.
 
-## 文档要求
+## Documentation requirements
 
-以下改动必须先更新文档：
+These changes update documentation first:
 
-- 公开契约变化（导出面、类型、行为）
-- 构建或发布流程变化
-- 事故修复（写入 `docs/postmortem/`）
+- Public contract changes (exports, types, behavior)
+- Build or release flow changes
+- Incident fixes (added under `docs/postmortem/`)
 
-其余改动更新 `docs/development-log/`。
+Other changes update `docs/development-log/`.
 
-## PR
+## Pull requests
 
-- 标题遵循提交格式。
-- 描述包含动机、行为变化、验证方式。
-- 公开契约变化同步 `CHANGELOG.md` 的 `## Unreleased`。
-- 确保 CI 全绿后再请求 review。
+- Titles follow the commit format.
+- Descriptions cover motivation, behavior changes and verification.
+- Public contract changes update `CHANGELOG.md` under `## Unreleased`.
+- Request review once CI is green.
 
-## 报告问题
+## Reporting issues
 
-使用 [Issue 模板](https://github.com/Chilfish/starter-ts-lib/issues/new/choose)。安全问题请勿公开提交，见 [SECURITY.md](./SECURITY.md)。
+Use the [issue templates](https://github.com/Chilfish/devkit/issues/new/choose). Do not report security issues publicly; see [SECURITY.md](./SECURITY.md).

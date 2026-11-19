@@ -1,49 +1,74 @@
-# 架构
+# Architecture
 
-## 目标
+## Goal
 
-这是一个可复用的 TypeScript 库脚手架。默认形态是**单入口、零运行时依赖、平台无关**，按需扩展。
+A reusable local-development package: one source for CLI runtime, env layering, local Postgres, the Neon `/sql` proxy and SILO storage. Projects consume it as a dependency and inject differences through `defineDevkit`.
 
-## 分层
+## Entry matrix
+
+| Entry | Content | Build target | Worker-safe |
+|---|---|---|---|
+| `.` | `defineDevkit`, config types | neutral | yes |
+| `./shared` | Pure URL/env helpers | neutral | yes |
+| `./cli` | Command specs, runtime, logger | node | no |
+| `./env` | Env file loading and banner | node | no |
+| `./local` | Postgres, database, migrations, orchestration | node | no |
+| `./proxy` | Neon `/sql` proxy | Bun | no |
+| `./storage` | SILO lifecycle and bucket policy | node | no |
+| `./commands` | `createDevCommands` | node | no |
+| `./bin/proxy` | Executable background proxy | Bun | no |
+
+`package.json#exports` and `tests/exports.test.ts` change together; adding or removing an entry is a public contract change.
+
+## Layers
 
 ```
-src/index.ts          公开入口（barrel，只做 re-export）
-src/<domain>/         领域实现，按职责拆分目录
-tests/                测试，目录镜像 src/
-docs/                 内部文档
+src/index.ts         config definition and public types (neutral)
+src/shared/          pure helpers (neutral)
+src/cli/             command runtime, envelope, exit codes, logger
+src/env/             env file loading, local overrides, remote expansion
+src/local/           Postgres, database, migrations, env file, proxy lifecycle
+src/storage/         SILO lifecycle and bucket policy
+src/proxy/           HTTP protocol translation
+src/commands/        built-in dev command group
+src/bin/proxy.ts     background entry
 ```
 
-依赖方向严格单向：
+Dependency direction: `commands → local → storage/util`, `cli → env → shared`, and everything may import `shared`. `shared` imports nothing.
 
+## Runtime boundaries
+
+- `src/index.ts` and `src/shared/` must not import `node:*` at runtime; `tests/contract/browser-build.test.ts` builds them with `bun build --target=browser` and asserts no builtins appear.
+- Consumers should restrict Worker imports:
+
+```js
+// eslint.config.js
+'no-restricted-imports': ['error', {
+  patterns: [{
+    group: ['@chilfish/devkit/cli', '@chilfish/devkit/env', '@chilfish/devkit/local',
+      '@chilfish/devkit/proxy', '@chilfish/devkit/storage', '@chilfish/devkit/commands'],
+    message: 'Node/Bun-only entry; use @chilfish/devkit/shared in Workers',
+  }],
+}]
 ```
-index.ts  →  domain  →  utils
-                  ↘  types
-```
 
-- `utils/` 不得引用 `domain/`。
-- `domain/` 之间需要互相调用时，通过显式注入或注册表解耦，避免 ESM 循环依赖。
-- `src/index.ts` 是唯一对外承诺的入口；内部模块路径不属于公开 API。
+- `pg` and `drizzle-orm` are loaded dynamically inside local database operations, so consumers that only use the CLI entry do not need them at install time.
 
-## 公开面
+## Build
 
-- 只使用具名导出，禁止 `export default`。
-- 类型与值分开导出：`export type { ... }` / `export { ... }`。
-- `package.json#exports` 决定发布面，`tests/exports.test.ts` 锁定其形状。
-- 新增导出视为公开契约变化，必须更新 CHANGELOG 与文档。
+`tsdown.config.ts` contains four build targets:
 
-## 平台无关
+1. neutral: `.` and `./shared`
+2. node: `./cli`, `./env`, `./local`, `./storage`, `./commands`
+3. neutral/Bun: `./proxy`
+4. node/Bun: `./bin/proxy` (ESM only, shebang preserved)
 
-构建目标为 `platform: 'neutral'`，不内联 Node 内置模块：
+Output uses `.js` / `.cjs` and `.d.ts` / `.d.cts` extensions.
 
-- 源码里可以 `import type` 引用 `node:*` 类型。
-- 运行时代码避免 `node:` 导入；确需 Node 能力时，拆成独立的子路径入口（如 `./node`）并单独声明 exports。
-- 浏览器/Edge 兼容性由「零运行时依赖 + neutral 构建」保证。
+## Extension rules
 
-## 扩展方式
-
-| 需求 | 做法 |
+| Need | Action |
 |---|---|
-| 增加子路径入口 | 新增 `src/<name>.ts`，在 tsdown `entry` 与 `package.json#exports` 同步声明 |
-| 增加 CLI | 单独一个构建目标，`platform: 'node'`，依赖用 `onlyBundle` 白名单内联 |
-| 引入运行时依赖 | 同步评估 ESM/CJS 双格式、tree-shaking、`sideEffects` |
-| 拆分多包 | 迁移到 workspace，并把版本集中到 catalog |
+| New subpath | Add `src/<name>/index.ts`, update `tsdown` entry, `package.json#exports`, `tests/exports.test.ts` and the API reference |
+| New project-specific command | Build a `CommandGroup` in the consuming project; never add it here |
+| New local service | Put it under `src/<service>/` with a health check, log file and `dry-run` branch |

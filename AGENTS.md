@@ -1,30 +1,30 @@
 # AGENTS.md
 
-仓库级硬约束。细节见 [docs/README.md](./docs/README.md)，两者冲突时以代码与本文为准并顺手修正文档。
+Repository-level hard constraints. Details live in [docs/README.md](./docs/README.md); if they conflict with the code, the code wins and the docs are fixed in the same change.
 
-## 技术栈
+## Stack
 
-- 包管理器：**Bun**（锁文件 `bun.lock`，CI 使用 `--frozen-lockfile`）
-- 构建：**tsdown**，ESM + CJS 双格式，`platform: 'neutral'`
-- 测试：**Vitest**，v8 coverage
-- 风格：**@antfu/eslint-config**（含 formatters），不使用 Prettier
-- Git hooks：**lefthook**（`lefthook.yml`）
-- 发布：tag 触发 GitHub Actions，npm OIDC + provenance
+- Package manager: **Bun** (`bun.lock`, CI uses `--frozen-lockfile`)
+- Build: **tsdown**, ESM + CJS, multiple entries with per-entry platforms
+- Tests: **Vitest**, v8 coverage
+- Style: **@antfu/eslint-config** with formatters; no Prettier
+- Git hooks: **lefthook** (`lefthook.yml`)
+- Release: tag-triggered GitHub Actions, npm OIDC + provenance
 
-## 每次任务都必须成立
+## Non-negotiables
 
-1. 只使用具名导出，禁止 `export default`。
-2. 类型导入必须 `import type` / `export type`。
-3. 禁止 `any`；用 `unknown` + 类型守卫在边界收窄。
-4. 源码保持平台无关，不引入运行时 `node:*` 导入。
-5. 改 `package.json#exports` 必须同步 `tests/exports.test.ts`。
-6. 新增逻辑必须有测试；修 bug 必须先补复现用例。
-7. 改公开契约、构建/发布流程、事故修复时先写文档。
-8. `lint:check` 与 `typecheck` 必须通过，不提交 `--no-verify`。
-9. 不在 `tsdown.config.ts` 里开启 `exports: true`。
-10. 依赖版本改动后更新 `bun.lock`。
+1. Named exports only; no `export default`.
+2. Type imports use `import type` / `export type`.
+3. No `any`; use `unknown` plus type guards at the boundary.
+4. Only `.` and `./shared` are platform-neutral; never import `node:*` from them.
+5. `package.json#exports` and `tests/exports.test.ts` change together.
+6. New logic needs tests; bug fixes start with a failing test.
+7. Public contracts, build/release flow and incident fixes are documented first.
+8. `lint:check` and `typecheck` must pass; no `--no-verify`.
+9. Do not enable `exports: true` in `tsdown.config.ts`.
+10. Update `bun.lock` whenever dependencies change.
 
-## 常用命令
+## Common commands
 
 ```bash
 bun install
@@ -32,18 +32,26 @@ bun run typecheck
 bun run lint:check
 bun run test
 bun run build
-bun run check        # 全量门禁
-bun run check:docs   # 文档链接与索引
+bun run check        # full gate
+bun run check:docs   # docs links and index
 ```
 
-## 目录
+## Layout
 
-| 路径 | 职责 |
+| Path | Responsibility |
 |---|---|
-| `src/index.ts` | 唯一公开入口 |
-| `tests/` | 测试，镜像 `src/` |
-| `examples/` | 可运行示例 |
-| `scripts/` | 门禁与发布脚本 |
-| `docs/` | 内部文档，索引在 `docs/README.md` |
+| `src/index.ts` | `defineDevkit` and public config types (neutral) |
+| `src/shared/` | Pure functions: URL checks, env parsing, local address derivation (neutral) |
+| `src/cli/` | Command specs, runtime, envelope, exit codes, logger |
+| `src/env/` | Environment file loading, local overrides, remote expansion, banner |
+| `src/local/` | Postgres lifecycle, database, migrations, env file, proxy orchestration |
+| `src/proxy/` | Neon `/sql` proxy (`Bun.serve`) |
+| `src/storage/` | SILO lifecycle, bucket and anonymous read policy |
+| `src/commands/` | Built-in `dev` command group |
+| `src/bin/proxy.ts` | Background proxy entry, spawned by absolute path |
+| `tests/` | Mirrors `src/`; contract tests lock the entry matrix |
+| `examples/` | Runnable examples |
+| `scripts/` | Gates and release scripts |
+| `docs/` | Internal docs, index in `docs/README.md` |
 | `.github/workflows/` | `ci.yml` / `publish.yml` |
-| `.github/ISSUE_TEMPLATE/` | Issue 模板 |
+| `.github/ISSUE_TEMPLATE/` | Issue templates |

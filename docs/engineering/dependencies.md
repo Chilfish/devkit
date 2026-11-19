@@ -1,21 +1,25 @@
-# 依赖
+# Dependencies
 
-## 原则
+## Policy
 
-- **零运行时依赖**：`dependencies` 必须为空。新增运行时依赖需要在 PR 中说明必要性、体积与替代方案。
-- **工具链进 devDependencies**：构建、测试、lint、发布脚本全部视为开发依赖。
-- **版本用 caret**：`^x.y.z`，锁定交给 `bun.lock`。
-- **不手工编辑锁文件**。
+- **Runtime dependencies are deliberate**: `commander` for the CLI and `aws4fetch` for S3 request signing. Any addition needs a PR note covering necessity, size and alternatives.
+- **Database drivers are optional peers**: `pg` and `drizzle-orm` so downstream versions are not forced to upgrade.
+- **Toolchain in devDependencies**: build, test, lint and release tooling never ships.
+- **Caret ranges**, locked by `bun.lock`.
+- **Never edit the lockfile by hand.**
 
-## 分类
+## Classification
 
-| 类别 | 位置 | 示例 |
+| Kind | Location | Examples |
 |---|---|---|
-| 运行时 | `dependencies` | 无 |
-| 开发工具 | `devDependencies` | tsdown、vitest、eslint |
-| 类型 | `devDependencies` | `@types/node`、`@types/bun` |
+| Runtime | `dependencies` | `commander`, `aws4fetch` |
+| Optional peer | `peerDependencies` + `peerDependenciesMeta` | `pg`, `drizzle-orm` |
+| Tooling | `devDependencies` | `tsdown`, `vitest`, `eslint` |
+| Types | `devDependencies` | `@types/node`, `@types/bun`, `@types/pg` |
 
-## 升级流程
+`pg` and `drizzle-orm` are imported dynamically inside local database operations, so entries that do not touch the database work without them.
+
+## Upgrade flow
 
 ```bash
 bun outdated
@@ -24,21 +28,21 @@ bun run check
 git diff bun.lock
 ```
 
-- 升级后必须跑 `bun run check` 与 `bun run check:docs`。
-- 主版本升级需记录在 `CHANGELOG.md` 的「变更」或「升级提示」中。
-- 升级失败时回退依赖，不要用 `--force` 绕过 peer 冲突。
+- Run `bun run check` and `bun run check:docs` after upgrades.
+- Record major upgrades in the CHANGELOG.
+- Roll back rather than bypassing peer conflicts with `--force`.
 
-## 新增依赖检查表
+## New dependency checklist
 
-- [ ] 是否真的需要？能否用标准库或现有依赖实现？
-- [ ] 许可证与项目兼容（MIT）？
-- [ ] 是否支持 ESM？是否需要 CJS 产物？
-- [ ] 是否引入 Node 内置模块？会破坏 `platform: 'neutral'`。
-- [ ] 是否显著增大安装体积？
-- [ ] 是否已加入 `devDependencies` 并更新 `bun.lock`？
+- [ ] Is it really needed? Can the standard library or an existing dependency do it?
+- [ ] License compatible (MIT)?
+- [ ] ESM-ready and, if needed, CJS-compatible?
+- [ ] Does it pull `node:` builtins into a neutral entry?
+- [ ] Does it significantly increase install size?
+- [ ] Added to the correct section and `bun.lock` updated?
 
-## 自动升级
+## Automation
 
-`.github/dependabot.yml` 每周检查 bun 生态依赖。Dependabot PR 必须通过全量 CI 才能合并。
+`.github/dependabot.yml` checks Bun dependencies weekly. Dependabot PRs must pass the full CI gate.
 
-`typescript` 当前忽略 `>=7`：`typescript-eslint` 尚未支持 TS 7，等上游支持后移除该 ignore。
+`typescript >=7` is currently ignored because `typescript-eslint` does not support it yet; remove the ignore when upstream catches up.

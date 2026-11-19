@@ -18,17 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
-          # 不设置 registry-url：认证通过 npm Trusted Publisher (OIDC) 交换短期凭据，
-          # registry-url 会写入带占位 token 的 .npmrc，反而干扰 OIDC。
+          # Do not set registry-url: authentication goes through npm Trusted
+          # Publisher (OIDC). registry-url writes an .npmrc with a placeholder
+          # token, which interferes with OIDC.
 
       - name: Upgrade npm for Trusted Publisher
         run: npm install -g npm@latest
@@ -62,8 +63,8 @@ jobs:
             if npm view "$pkg@$version" version; then
               exit 0
             fi
-            echo "registry 尚未可安装（第 $attempt 次），10s 后重试"
+            echo "registry is not serving $pkg@$version yet (attempt $attempt), retrying in 10s"
             sleep 10
           done
-          echo "registry 在 300s 内没有出现 $pkg@$version"
+          echo "$pkg@$version did not appear in the registry within 300s"
           exit 1
