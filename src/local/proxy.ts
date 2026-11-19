@@ -2,7 +2,7 @@ import type { DevkitConfig } from '../index'
 import type { LogLike } from '../shared/index'
 import { spawn } from 'node:child_process'
 import { existsSync, openSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createLogger } from '../cli/logger'
 import { isLocalUrl } from '../shared/index'
@@ -16,21 +16,43 @@ export interface ProxyHealth {
 }
 
 /**
+ * Find the background proxy entry by walking up from the calling module.
+ *
+ * Bundling puts this code in `dist/local-<hash>.js`, so the entry is
+ * `<dir>/bin/proxy.js`; from source it is `<dir>/bin/proxy.ts`. Walking up also
+ * covers unbundled package roots (`dist/bin`, `src/bin`).
+ */
+export function findProxyEntry(moduleDir: string): string | undefined {
+  let dir = moduleDir
+  for (let depth = 0; depth < 6; depth += 1) {
+    const candidates = [
+      join(dir, 'bin', 'proxy.js'),
+      join(dir, 'bin', 'proxy.ts'),
+      join(dir, 'dist', 'bin', 'proxy.js'),
+      join(dir, 'src', 'bin', 'proxy.ts'),
+    ]
+    const found = candidates.find(candidate => existsSync(candidate))
+    if (found)
+      return found
+
+    const parent = dirname(dir)
+    if (parent === dir)
+      break
+    dir = parent
+  }
+  return undefined
+}
+
+/**
  * Absolute path of the background proxy entry.
  *
  * Resolved from this module, never from `cwd` or the host project's script
  * layout — that is exactly how the old `scripts/dev-db-proxy.ts` reference broke.
  */
 export function resolveProxyEntry(): string {
-  const candidates = [
-    new URL('../bin/proxy.js', import.meta.url),
-    new URL('../bin/proxy.ts', import.meta.url),
-  ]
-  for (const candidate of candidates) {
-    const path = fileURLToPath(candidate)
-    if (existsSync(path))
-      return path
-  }
+  const entry = findProxyEntry(dirname(fileURLToPath(import.meta.url)))
+  if (entry)
+    return entry
   throw new Error('Background proxy entry not found. Build the package or run from source with Bun.')
 }
 

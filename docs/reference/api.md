@@ -10,7 +10,7 @@ Eight typed entries plus one executable entry. `package.json#exports` and `tests
 | `@chilfish/devkit/shared` | `isLocalUrl`, `isLocalMode`, `parseEnvContent`, `upsertEnvValues`, `localPublicBase`, `localEndpoint`, `localBucket`, `parseDatabaseInfo` | neutral |
 | `@chilfish/devkit/cli` | `CommandSpec`, `CommandGroup`, `CommandContext`, `buildCli`, `runCli`, `describeCli`, `createLogger`, `requireEnv`, `requireEnvVar`, envelope and exit helpers | node |
 | `@chilfish/devkit/env` | `loadEnvFile`, `describeEnvironment`, `readEnvFile`, `readOnlineTarget`, `applyOnlineEnv` | node |
-| `@chilfish/devkit/local` | `ensureDevServices` (with `databaseUrl` / `endpoint` overrides), Postgres / database / migration / env-file / proxy helpers | node |
+| `@chilfish/devkit/local` | `ensureDevServices` (with `databaseUrl` / `endpoint` overrides), `findProxyEntry`, Postgres / database / migration / env-file / proxy helpers | node |
 | `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy` | Bun |
 | `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
 | `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand` | node |

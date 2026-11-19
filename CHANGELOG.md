@@ -4,6 +4,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## Unreleased
 
+## 0.1.2
+
+### Fixed
+
+- `resolveProxyEntry` now walks up from the calling module, so the published package finds `dist/bin/proxy.js`. Previously it looked one directory too high (`../bin/proxy.js` from a `dist/` chunk) and every path reaching `ensureDevProxy` failed with "Background proxy entry not found".
+- Added `findProxyEntry`, exported from `./local`, plus regression tests for both the bundled `dist/` layout and the source layout.
+
 ## 0.1.1
 
 ### Added
