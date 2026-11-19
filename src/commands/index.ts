@@ -1,7 +1,7 @@
 import type { CommandGroup, CommandSpec } from '../cli'
 import type { DevkitConfig } from '../index'
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Option } from 'commander'
 import { CliError, ConfigError } from '../cli'
@@ -18,10 +18,10 @@ import { isLocalMode, isLocalUrl } from '../shared/index'
 import { ensureSiloRunning } from '../storage'
 
 /** Resolve a command from `node_modules/.bin` first, then fall back to `PATH`. */
-export function resolveCommand(command: string): string {
+export function resolveCommand(command: string, cwd = process.cwd()): string {
   if (command.includes('/') || command.includes('\\'))
     return command
-  const binDir = join(process.cwd(), 'node_modules', '.bin')
+  const binDir = join(cwd, 'node_modules', '.bin')
   const candidates = process.platform === 'win32'
     ? [
         join(binDir, `${command}.cmd`),
@@ -32,6 +32,91 @@ export function resolveCommand(command: string): string {
         join(binDir, command),
       ]
   return candidates.find(candidate => existsSync(candidate)) ?? command
+}
+
+/**
+ * Resolve a package's real entry from its manifest.
+ *
+ * On Windows `node_modules/.bin` contains native shims (`.exe` / `.cmd`), which
+ * cannot be passed to `node` as a script. The manifest `bin` target can.
+ */
+export function resolvePackageBin(command: string, cwd = process.cwd()): string | undefined {
+  if (command.includes('/') || command.includes('\\'))
+    return undefined
+  const packageDir = join(cwd, 'node_modules', command)
+  const manifest = join(packageDir, 'package.json')
+  if (!existsSync(manifest))
+    return undefined
+
+  try {
+    const pkg = JSON.parse(readFileSync(manifest, 'utf8')) as { bin?: string | Record<string, string> }
+    const bin = typeof pkg.bin === 'string'
+      ? pkg.bin
+      : (pkg.bin?.[command] ?? (pkg.bin
+          ? Object.values(pkg.bin)[0]
+          : undefined))
+    if (!bin)
+      return undefined
+    const entry = join(packageDir, bin)
+    return existsSync(entry)
+      ? entry
+      : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
+export interface ServerSpawn {
+  executable: string
+  args: string[]
+  shell: boolean
+}
+
+/**
+ * Decide how to start a configured dev server.
+ *
+ * Order: real package entry with the configured runtime, then a usable shim
+ * (`.cmd` / `.exe` run directly), then the resolved path with the runtime.
+ */
+export function resolveServerSpawn(
+  server: { runtime: 'node' | 'bun', command: string, args?: readonly string[] },
+  extraArgs: string[] = [],
+  cwd = process.cwd(),
+): ServerSpawn {
+  const args = [
+    ...(server.args ?? []),
+    ...extraArgs,
+  ]
+  const runtime = runtimeBinary(server.runtime)
+
+  if (server.command.includes('/') || server.command.includes('\\')) {
+    return {
+      executable: runtime,
+      args: [server.command, ...args],
+      shell: false,
+    }
+  }
+
+  const entry = resolvePackageBin(server.command, cwd)
+  if (entry) {
+    return {
+      executable: runtime,
+      args: [entry, ...args],
+      shell: false,
+    }
+  }
+
+  const resolved = resolveCommand(server.command, cwd)
+  if (/\.(?:cmd|bat)$/i.test(resolved))
+    return { executable: resolved, args, shell: process.platform === 'win32' }
+  if (/\.exe$/i.test(resolved))
+    return { executable: resolved, args, shell: false }
+  return {
+    executable: runtime,
+    args: [resolved, ...args],
+    shell: false,
+  }
 }
 
 function runtimeBinary(runtime: 'node' | 'bun'): string {
@@ -291,12 +376,10 @@ function devServerSpec(
 
       if (ctx.dryRun) {
         for (const server of servers) {
-          ctx.log.info(`dry-run: would run ${server.runtime} ${resolveCommand(server.command)} ${[
-            ...server.args,
-            ...(servers[0] === server
-              ? forwarded
-              : []),
-          ].join(' ')}`.trimEnd())
+          const plan = resolveServerSpawn(server, servers[0] === server
+            ? forwarded
+            : [])
+          ctx.log.info(`dry-run: would run ${plan.executable} ${plan.args.join(' ')}`.trimEnd())
         }
         return {
           data: {
@@ -312,19 +395,14 @@ function devServerSpec(
       })
 
       const children = servers.map((server) => {
-        const args = [
-          ...server.args,
-          ...(servers[0] === server
-            ? forwarded
-            : []),
-        ]
-        const executable = runtimeBinary(server.runtime)
-        const command = resolveCommand(server.command)
-        ctx.log.child(server.name).info(`starting ${server.runtime} ${command} ${args.join(' ')}`.trimEnd())
-        const child = spawn(executable, [command, ...args], {
+        const plan = resolveServerSpawn(server, servers[0] === server
+          ? forwarded
+          : [])
+        ctx.log.child(server.name).info(`starting ${plan.executable} ${plan.args.join(' ')}`.trimEnd())
+        const child = spawn(plan.executable, plan.args, {
           stdio: 'inherit',
           env: process.env,
-          shell: process.platform === 'win32' && /\.cmd$/i.test(command),
+          shell: plan.shell,
         })
         child.on('error', (error) => {
           ctx.log.child(server.name).error(`failed to start: ${error.message}`)

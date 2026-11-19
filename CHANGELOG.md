@@ -4,6 +4,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## Unreleased
 
+## 0.1.3
+
+### Fixed
+
+- `dev server` resolves a server command through its package manifest (`node_modules/<command>/package.json` → `bin`) before using the `node_modules/.bin` shim. On Windows this avoids passing `astro.exe` / `.cmd` shims to `node` as a script.
+- When no package entry exists, `.cmd` / `.bat` shims run directly through the shell and `.exe` shims run directly; the configured runtime is only prefixed to real scripts.
+- Added `resolvePackageBin` and `resolveServerSpawn` (exported from `./commands`) with tests for string/object `bin`, Bun runtimes, explicit paths, missing packages and Windows shims.
+
 ## 0.1.2
 
 ### Fixed

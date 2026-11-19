@@ -28,6 +28,7 @@ Brings up the local stack, then starts every configured server.
 - `--` arguments are forwarded to the first configured server.
 - Signals are forwarded to all servers; the first non-zero exit code becomes the command exit code.
 - `--local` (when `serverLocalFlag` is enabled) sets `<localFlag>=1` and reloads the env file.
+- A bare `command` is resolved through `node_modules/<command>/package.json` → `bin` and run with the configured runtime. If no manifest entry exists, a Windows `.cmd` / `.bat` / `.exe` shim is executed directly instead of being passed to `node`.
 - `--dry-run` reports the planned processes without starting anything.
 
 ```bash

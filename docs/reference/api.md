@@ -13,7 +13,7 @@ Eight typed entries plus one executable entry. `package.json#exports` and `tests
 | `@chilfish/devkit/local` | `ensureDevServices` (with `databaseUrl` / `endpoint` overrides), `findProxyEntry`, Postgres / database / migration / env-file / proxy helpers | node |
 | `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy` | Bun |
 | `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
-| `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand` | node |
+| `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand`, `resolvePackageBin`, `resolveServerSpawn` | node |
 | `@chilfish/devkit/bin/proxy` | Executable background proxy entry | Bun |
 
 ## Root
