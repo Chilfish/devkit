@@ -14,9 +14,12 @@ Bun is pinned in `package.json#packageManager`; CI uses the same version.
 
 ```bash
 bun add -d @chilfish/devkit
+
+# only when you use the local database stack (dev db / migrations / proxy)
+bun add pg drizzle-orm
 ```
 
-Install `pg` and `drizzle-orm` as well when you use the local database stack.
+`pg` and `drizzle-orm` are optional peers, but `dev db`, `dev proxy` and `dev server` need them at runtime. Missing peers fail with `MISSING_PEER` and the install command in the hint.
 
 ## Write the config
 
@@ -57,6 +60,17 @@ await runCli(
 
 Add project-specific commands as `CommandGroup`s and pass them through `groups`; top-level commands go through `rootCommands`.
 
+Expose the entry script through `package.json` so the documented `helpHint` works:
+
+```json
+{
+  "scripts": {
+    "ymmt": "bun scripts/cli.ts",
+    "dev": "bun run ymmt dev server"
+  }
+}
+```
+
 ## Environment file
 
 The env module reads `env.file` and fills only keys missing from the process environment.
@@ -64,6 +78,18 @@ The env module reads `env.file` and fills only keys missing from the process env
 - With the local flag on, `DATABASE_URL`, `NEON_HTTP_ENDPOINT` and the configured public base are forced to local values.
 - With the local flag off, `<KEY>_ONLINE` values are expanded into `<KEY>`.
 - Explicit process variables always win.
+
+## Migrating an existing local setup
+
+The package does not replace business commands. Migrate in this order:
+
+1. Add `dev.config.ts` with the constants currently spread across scripts (database, bucket, migrations, env file, dev servers).
+2. Replace the local CLI runtime / envelope / exit / logger imports with `@chilfish/devkit/cli`.
+3. Replace local Postgres, proxy and storage orchestration with `@chilfish/devkit/local`, `@chilfish/devkit/proxy` and `@chilfish/devkit/storage`; use `createDevCommands(config)` for the `dev` group.
+4. Delete the copied implementation in the same change; do not keep both sources.
+5. Keep project-specific commands, framework config and business pipelines in the project.
+
+Worker/framework code may import `@chilfish/devkit/shared` only. Everything else is Node or Bun.
 
 ## First run
 
