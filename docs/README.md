@@ -31,6 +31,13 @@
 | [engineering/git-workflow.md](./engineering/git-workflow.md) | 分支、提交信息、hooks、PR 规范 | 提交前 |
 | [engineering/release-checklist.md](./engineering/release-checklist.md) | 发版逐项检查表 | 每次发版 |
 
+## 规划
+
+| 文档 | 说明 |
+|---|---|
+| [planning/README.md](./planning/README.md) | 规划目录约定与状态 |
+| [planning/current-state.md](./planning/current-state.md) | 两个下游项目的重复与分叉审计（2026-11-19） |
+| [planning/devkit-design.md](./planning/devkit-design.md) | 包形态、公开 API、迁移阶段与验收标准 |
 ## 参考
 
 | 文档 | 说明 |

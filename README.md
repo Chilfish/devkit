@@ -1,4 +1,6 @@
-# starter-ts-lib
+# devkit
+
+> 状态：规划中。本仓库当前是 `starter-ts-lib` 的干净副本，目标形态见 [docs/planning/devkit-design.md](./docs/planning/devkit-design.md)；包名、README 与发布配置在阶段 1 重命名。
 
 > 现代 TypeScript 库脚手架：tsdown 构建、Vitest 测试、ESLint 统一风格、Bun 安装、OIDC 一键发布。
 
