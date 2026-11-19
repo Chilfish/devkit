@@ -37,6 +37,8 @@ jobs:
       - run: bun run verify:package
       - run: bun run check:docs
       - run: bun run example
+      - run: bun examples/cli.ts describe > /dev/null
+      - run: bun examples/cli.ts dev db --dry-run --json > /dev/null
 
       - name: Verify build output
         run: |

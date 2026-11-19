@@ -15,7 +15,12 @@
 | `bun run check` | Full gate |
 | `bun run check:docs` | Documentation links and index |
 | `bun run verify:package` | Validate the publish tarball after a build |
-| `bun run example` | Run `examples/basic.ts` |
+| `bun run example` | Run the config example |
+| `bun run example:cli` | Run the full CLI wiring (`--help`, `describe`, `dev ...`) |
+| `bun run example:env` | Load the env file and print the banner |
+| `bun run example:local` | Dry-run the local stack (set `DEVKIT_EXAMPLE_APPLY=1` to start it) |
+| `bun run example:proxy` | Run the `/sql` proxy in the foreground |
+| `bun run test:integration` | Database integration tests (needs `DEVKIT_PG_SMOKE=1`) |
 
 ## Writing code
 

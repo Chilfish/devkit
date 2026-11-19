@@ -17,6 +17,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - `./storage`: SILO / MinIO discovery and startup, bucket creation and anonymous read policy via `aws4fetch`.
 - `./commands`: built-in `dev server`, `dev db`, `dev proxy` and `dev storage` commands driven by configuration.
 - `./bin/proxy`: background proxy entry, resolved by absolute path inside the package.
+- Runnable examples for the config, full CLI wiring, env loading, local stack and foreground proxy.
+- Real-scenario tests: CLI end-to-end (help, `describe`, exit codes, envelopes), Postgres create + drizzle migration + proxy single/batch query, and background proxy start/reuse/conflict.
 
 ### Changed
 

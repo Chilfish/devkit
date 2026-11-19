@@ -6,7 +6,8 @@
 |---|---|---|---|
 | Unit | `tests/**` | none | Config validation, env precedence, env-file order, URL checks, envelopes, exit codes |
 | Contract | `tests/exports.test.ts`, `tests/contract/` | filesystem, Bun CLI | Entry matrix, `package.json` shape, browser-target build |
-| Integration | `tests/**` (opt-in) | local Postgres / SILO | Database creation, migrations, proxy queries, `/health` |
+| E2E | `tests/e2e/` | Bun | Real CLI process: help, `describe`, exit codes, envelopes, implicit JSON switch |
+| Integration | `tests/integration/` | local Postgres, Bun | Create database, apply drizzle migrations, proxy single/batch query, `/health`, background proxy start/reuse/conflict |
 
 Test directories mirror `src/`: `tests/cli/runtime.test.ts` covers `src/cli/runtime.ts`.
 
@@ -43,7 +44,16 @@ afterEach(() => {
 
 ## Integration opt-in
 
-Database integration tests run only with a local Postgres available (`DEVKIT_PG_SMOKE=1`). The proxy handler is tested in-process; `startProxy` requires Bun.
+Database integration tests run only when `DEVKIT_PG_SMOKE=1` is set and a server is reachable:
+
+```bash
+DEVKIT_PG_SMOKE=1 bun run test:integration
+DEVKIT_PG_SMOKE=1 DEVKIT_PG_ADMIN_URL=postgres://postgres@localhost:5432/postgres bun run test:integration
+```
+
+They create a uniquely named database, apply `tests/fixtures/migrations`, exercise the proxy handler in-process, and drop the database afterwards. The proxy lifecycle test also spawns the real background entry, checks `/health`, verifies reuse, and verifies the conflict error for another database.
+
+The proxy handler is tested in-process; `startProxy` requires Bun.
 
 ## Forbidden
 
