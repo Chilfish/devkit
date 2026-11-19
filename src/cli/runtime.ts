@@ -109,6 +109,8 @@ export interface BuildCliOptions {
   version: string
   groups?: CommandGroup[]
   rootCommands?: CommandSpec[]
+  /** Override describe labels so hosts can keep their existing language. */
+  labels?: CliLabels
 }
 
 type RuntimeFlag = 'json' | 'quiet' | 'dryRun' | 'logLevel' | 'logFile'
@@ -477,6 +479,12 @@ export interface CliDescription {
   groups: { name: string, description: string, commands: DescribeCommand[] }[]
 }
 
+/** Labels exposed by `describe`; override them to preserve an existing contract. */
+export interface CliLabels {
+  exitCodes?: { code: number, meaning: string }[]
+  globalOptions?: { flags: string, description: string }[]
+}
+
 /** Structured command-tree description shared by the `describe` command and doc generation. */
 export function describeCli(options: BuildCliOptions): CliDescription {
   const toDescribed = (spec: CommandSpec): DescribeCommand => ({
@@ -508,13 +516,13 @@ export function describeCli(options: BuildCliOptions): CliDescription {
   return {
     name: options.config.identity.name,
     version: options.version,
-    exitCodes: [
+    exitCodes: options.labels?.exitCodes ?? [
       { code: 0, meaning: 'success / already converged' },
       { code: 1, meaning: 'runtime failure (partial batch failure included)' },
       { code: 2, meaning: 'usage error: unknown flag, missing required value, invalid value' },
       { code: 3, meaning: 'missing configuration: env var or config file not set' },
     ],
-    globalOptions: [
+    globalOptions: options.labels?.globalOptions ?? [
       { flags: '--json', description: 'write a single-line JSON envelope to stdout' },
       { flags: '--quiet', description: 'keep only warnings and errors' },
       { flags: '--dry-run', description: 'read-only: no database, object-storage or local file writes' },

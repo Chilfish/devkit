@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Option } from 'commander'
 import { CliError, ConfigError } from '../cli'
+import { loadEnvFile } from '../env/index'
 import {
   applyMigrations,
   ensureDatabase,
@@ -39,19 +40,65 @@ function runtimeBinary(runtime: 'node' | 'bun'): string {
     : (process.env.NODE ?? 'node')
 }
 
-function devDbSpec(config: DevkitConfig): CommandSpec {
+export type DevCommandKey = 'server' | 'db' | 'proxy' | 'storage'
+
+/** Optional text overrides so hosts can keep an existing describe/help contract. */
+export interface DevCommandStringOverride {
+  description?: string
+  details?: string
+  examples?: string[]
+  /** Keyed by long option name without `--`, e.g. `url`, `port`, `local`. */
+  optionDescriptions?: Record<string, string>
+}
+
+export interface DevCommandStrings {
+  groupDescription?: string
+  commands?: Partial<Record<DevCommandKey, DevCommandStringOverride>>
+}
+
+export interface DevCommandsOptions {
+  strings?: DevCommandStrings
+  /** Add `--local` to `dev server` and map it to `<localFlag>=1` for this run. */
+  serverLocalFlag?: boolean
+}
+
+function optionDescription(
+  override: DevCommandStringOverride | undefined,
+  key: string,
+  fallback: string,
+): string {
+  return override?.optionDescriptions?.[key] ?? fallback
+}
+
+function applyStrings<T>(spec: CommandSpec<T>, override?: DevCommandStringOverride): CommandSpec<T> {
+  if (!override)
+    return spec
+  return {
+    ...spec,
+    description: override.description ?? spec.description,
+    ...(override.details !== undefined || spec.details !== undefined
+      ? { details: override.details ?? spec.details }
+      : {}),
+    ...(override.examples !== undefined || spec.examples !== undefined
+      ? { examples: override.examples ?? spec.examples }
+      : {}),
+  }
+}
+
+function devDbSpec(config: DevkitConfig, override?: DevCommandStringOverride): CommandSpec {
+  const hint = config.identity.helpHint
   return {
     id: 'dev.db',
     description: 'initialize the local database: start Postgres, create the database, apply migrations, sync the env file',
     details: 'Does not start the dev server. Global `--dry-run` only reports the steps; nothing is started or written.',
-    examples: ['bun run dev db', `bun run dev db --url ${config.database.localUrl}`],
+    examples: [`${hint} dev db`, `${hint} dev db --url ${config.database.localUrl}`],
     options: [
-      new Option('--url <url>', 'target database URL, defaults to the configured local URL'),
+      new Option('--url <url>', optionDescription(override, 'url', 'target database URL, defaults to the configured local URL')),
     ],
     async run(ctx) {
-      const override = ctx.options.url
-      const databaseUrl = typeof override === 'string' && override.length > 0
-        ? override
+      const urlOption = ctx.options.url
+      const databaseUrl = typeof urlOption === 'string' && urlOption.length > 0
+        ? urlOption
         : config.database.localUrl
       const endpoint = process.env.NEON_HTTP_ENDPOINT || config.database.proxyEndpoint
       const steps = [
@@ -85,30 +132,31 @@ function devDbSpec(config: DevkitConfig): CommandSpec {
   }
 }
 
-function devProxySpec(config: DevkitConfig): CommandSpec {
+function devProxySpec(config: DevkitConfig, override?: DevCommandStringOverride): CommandSpec {
+  const hint = config.identity.helpHint
   return {
     id: 'dev.proxy',
     description: 'run the Neon HTTP-compatible proxy in the foreground and forward /sql to local Postgres',
     details: 'workerd cannot open TCP connections, so astro dev / preview needs this proxy. '
       + 'Only local `DATABASE_URL` values are accepted. The server runs in the foreground; end it with Ctrl-C. '
       + '`dev server` starts the same proxy on demand, so running this separately is optional.',
-    examples: ['bun run dev proxy', 'bun run dev proxy --port 4444'],
+    examples: [`${hint} dev proxy`, `${hint} dev proxy --port 4444`],
     options: [
-      new Option('--port <n>', 'listen port, defaults to the configured proxy endpoint'),
+      new Option('--port <n>', optionDescription(override, 'port', 'listen port, defaults to the configured proxy endpoint')),
     ],
     async run(ctx) {
       const databaseUrl = process.env.DATABASE_URL
       if (!databaseUrl) {
         throw new ConfigError('Missing environment variable DATABASE_URL', {
           code: 'MISSING_ENV',
-          hint: `Set DATABASE_URL in ${config.env.file}, or run "bun run dev db" first`,
+          hint: `Set DATABASE_URL in ${config.env.file}, or run "${hint} dev db" first`,
           context: { name: 'DATABASE_URL' },
         })
       }
       if (!isLocalUrl(databaseUrl)) {
         throw new CliError(`The development proxy only accepts local database URLs, received ${databaseUrl}`, {
           code: 'NON_LOCAL_DATABASE',
-          hint: `Point DATABASE_URL in ${config.env.file} back at localhost, or run "bun run dev db" first`,
+          hint: `Point DATABASE_URL in ${config.env.file} back at localhost, or run "${hint} dev db" first`,
           context: { databaseUrl },
         })
       }
@@ -149,17 +197,19 @@ function devProxySpec(config: DevkitConfig): CommandSpec {
 }
 
 function devStorageSpec(config: DevkitConfig): CommandSpec {
+  const hint = config.identity.helpHint
+  const flag = config.env.localFlag
   return {
     id: 'dev.storage',
     description: 'start local object storage (SILO) and prepare the bucket without starting the dev server',
-    details: 'Requires the local flag (can live in the env file): the endpoint must be local. '
+    details: `Requires ${flag}=1 (can live in the env file): the endpoint must be local. `
       + '`dev server` takes the same path automatically; use this to verify the endpoint, bucket and anonymous read before uploads.',
-    examples: ['bun run dev storage', 'LOCAL=1 bun run dev storage --json'],
+    examples: [`${hint} dev storage`, `${flag}=1 ${hint} dev storage --json`],
     async run(ctx) {
-      if (!isLocalMode(process.env, config.env.localFlag)) {
-        throw new CliError(`requires ${config.env.localFlag}=1 (can be set in ${config.env.file})`, {
+      if (!isLocalMode(process.env, flag)) {
+        throw new CliError(`requires ${flag}=1 (can be set in ${config.env.file})`, {
           code: 'NOT_LOCAL_MODE',
-          hint: `Set ${config.env.localFlag}=1 in ${config.env.file}`,
+          hint: `Set ${flag}=1 in ${config.env.file}`,
         })
       }
 
@@ -184,25 +234,60 @@ function devStorageSpec(config: DevkitConfig): CommandSpec {
   }
 }
 
-function devServerSpec(config: DevkitConfig): CommandSpec {
+function devServerSpec(
+  config: DevkitConfig,
+  options: DevCommandsOptions,
+  override?: DevCommandStringOverride,
+): CommandSpec {
+  const hint = config.identity.helpHint
+  const flag = config.env.localFlag
+  const localFlag = options.serverLocalFlag === true
+  const optionList = [
+    ...(localFlag
+      ? [
+          new Option('--local', optionDescription(override, 'local', `set ${flag}=1 for this run`)),
+        ]
+      : []),
+  ]
+
+  const details = [
+    'Postgres and the proxy are independent background processes: they survive the dev server, and repeated runs reuse them.',
+    '',
+    'Arguments after `--` are forwarded to the first configured server:',
+    `  ${hint} dev server -- --port 4322`,
+    '',
+    localFlag
+      ? `\`--local\` sets ${flag}=1: database, object storage and media URLs switch to this machine.`
+      : '',
+    'Global `--dry-run` only checks the plan and starts nothing.',
+  ].filter(line => line !== '').join('\n')
+
+  const examples = [
+    'bun run dev',
+    `${hint} dev server`,
+    ...(localFlag
+      ? [`${hint} dev server --local`]
+      : []),
+    `${hint} dev server -- --port 4322`,
+  ]
+
   return {
     id: 'dev.server',
     description: 'start the dev servers: bring up Postgres / database / migrations / proxy first, then run every configured server',
-    details: [
-      'Postgres and the proxy are independent background processes: they survive the dev server, and repeated runs reuse them.',
-      '',
-      'Arguments after `--` are forwarded to the first configured server:',
-      '  bun run dev server -- --port 4322',
-      '',
-      'Global `--dry-run` only checks the plan and starts nothing.',
-    ].join('\n'),
-    examples: ['bun run dev', 'bun run dev server', 'bun run dev server -- --port 4322'],
+    details,
+    examples,
+    options: optionList,
     arguments: [
       { name: 'args...', description: 'arguments after `--`, forwarded to the first server', required: false },
     ],
     async run(ctx) {
       const servers = config.dev.servers
       const forwarded = ctx.args.slice()
+
+      if (ctx.flag('local')) {
+        process.env[flag] = '1'
+        loadEnvFile({ config, log: false })
+      }
 
       if (ctx.dryRun) {
         for (const server of servers) {
@@ -276,16 +361,22 @@ function devServerSpec(config: DevkitConfig): CommandSpec {
   }
 }
 
-/** Build the built-in `dev` command group for a project. */
-export function createDevCommands(config: DevkitConfig): CommandGroup {
+/**
+ * Build the built-in `dev` command group for a project.
+ *
+ * `options.strings` lets a host preserve its existing help/describe text, and
+ * `options.serverLocalFlag` adds the downstream `--local` switch.
+ */
+export function createDevCommands(config: DevkitConfig, options: DevCommandsOptions = {}): CommandGroup {
+  const strings = options.strings
   return {
     name: 'dev',
-    description: 'local development: dev servers, Postgres, Neon HTTP proxy and SILO object storage',
+    description: strings?.groupDescription ?? 'local development: dev servers, Postgres, Neon HTTP proxy and SILO object storage',
     commands: [
-      devServerSpec(config),
-      devDbSpec(config),
-      devProxySpec(config),
-      devStorageSpec(config),
+      applyStrings(devServerSpec(config, options, strings?.commands?.server), strings?.commands?.server),
+      applyStrings(devDbSpec(config, strings?.commands?.db), strings?.commands?.db),
+      applyStrings(devProxySpec(config, strings?.commands?.proxy), strings?.commands?.proxy),
+      applyStrings(devStorageSpec(config), strings?.commands?.storage),
     ],
   }
 }

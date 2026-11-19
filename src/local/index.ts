@@ -18,6 +18,10 @@ export interface EnsureDevServicesOptions {
   dryRun?: boolean
   /** Start the local object store as part of the stack. Defaults to true. */
   storage?: boolean
+  /** Override the database URL, e.g. for benchmarks and ad-hoc scripts. */
+  databaseUrl?: string
+  /** Override the proxy endpoint. */
+  endpoint?: string
 }
 
 export interface DevServicesResult {
@@ -36,8 +40,8 @@ export interface DevServicesResult {
 export async function ensureDevServices(options: EnsureDevServicesOptions): Promise<DevServicesResult> {
   const { config } = options
   const log = options.log ?? createLogger({ name: 'dev' })
-  const databaseUrl = process.env.DATABASE_URL || config.database.localUrl
-  const endpoint = process.env.NEON_HTTP_ENDPOINT || config.database.proxyEndpoint
+  const databaseUrl = options.databaseUrl || process.env.DATABASE_URL || config.database.localUrl
+  const endpoint = options.endpoint || process.env.NEON_HTTP_ENDPOINT || config.database.proxyEndpoint
 
   if (!isLocalUrl(databaseUrl)) {
     log.warn(

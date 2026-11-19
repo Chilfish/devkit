@@ -32,6 +32,30 @@ The background entry is resolved by absolute path inside the package, never from
 
 The banner prints mode, database host/name and storage address only. It never prints credentials.
 
+## Switching one process to the remote target
+
+`loadEnvFile` handles `*_ONLINE` at startup. When a long-running command must
+re-target a single process (publish/sync style work), use:
+
+```ts
+import { applyOnlineEnv, readOnlineTarget } from '@chilfish/devkit/env'
+
+const target = readOnlineTarget({ config })
+const restore = applyOnlineEnv({ config, remote: target.remote })
+try {
+  await publishTo(target.databaseUrl)
+}
+finally {
+  restore()
+}
+```
+
+`readOnlineTarget` reads the env file only, refuses a local remote URL and
+reports missing keys with exit code 1. `applyOnlineEnv` expands
+`<KEY><suffix>`, sets the local flag to `0`, clears local-only endpoints
+(`NEON_HTTP_ENDPOINT`, `S3_ENDPOINT`, `MINIO_*`, `SILO_*`) and restores the
+previous process state when the returned function is called.
+
 ## Postgres discovery
 
 `resolvePostgresInstall` looks for `pg_ctl` in this order: `PG_CTL` → `PATH` → Scoop → standard install directories. `PGDATA` always wins for the data directory.

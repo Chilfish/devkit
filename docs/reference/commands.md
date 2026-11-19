@@ -2,6 +2,24 @@
 
 `createDevCommands(config)` returns a `dev` group with four commands. Every command accepts the global options listed in [cli](../guide/cli.md).
 
+## Options
+
+```ts
+createDevCommands(config, {
+  serverLocalFlag: true,
+  strings: {
+    groupDescription: 'local environment',
+    commands: {
+      server: { description: 'start dev servers', examples: ['bun run ymmt dev server'] },
+      db: { optionDescriptions: { url: 'target database URL' } },
+    },
+  },
+})
+```
+
+- `serverLocalFlag`: adds `--local` to `dev server` and sets `<localFlag>=1` for that run, re-loading the env file so local defaults apply.
+- `strings`: overrides group/command descriptions, details, examples and option descriptions while keeping command ids and options intact.
+
 ## `dev server`
 
 Brings up the local stack, then starts every configured server.
@@ -9,6 +27,7 @@ Brings up the local stack, then starts every configured server.
 - Postgres, the proxy and SILO survive the dev server and are reused on the next run.
 - `--` arguments are forwarded to the first configured server.
 - Signals are forwarded to all servers; the first non-zero exit code becomes the command exit code.
+- `--local` (when `serverLocalFlag` is enabled) sets `<localFlag>=1` and reloads the env file.
 - `--dry-run` reports the planned processes without starting anything.
 
 ```bash

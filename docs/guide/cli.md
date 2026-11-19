@@ -37,6 +37,29 @@ const spec: CommandSpec = {
 
 `identity.jsonEnvVar` adds an implicit JSON switch (for example `YMMT_JSON=1`).
 
+## Keeping an existing describe contract
+
+`buildCli` and `describeCli` accept `labels`:
+
+```ts
+buildCli({
+  config,
+  version,
+  groups,
+  labels: {
+    exitCodes: [{ code: 0, meaning: '成功 / 已收敛' }],
+    globalOptions: [{ flags: '--json', description: '输出单行 JSON 信封到 stdout' }],
+  },
+})
+```
+
+Command-level text is overridden through `createDevCommands(config, { strings })`; see [commands](../reference/commands.md).
+
+## Runtime failures vs. config errors
+
+- `requireEnvVar(name)` throws `ConfigError` (exit 3) with a copy-pasteable hint.
+- `requireEnv(name, message?)` throws a plain `Error` (exit 1) for hosts that treat a missing variable as a runtime failure.
+
 ## Exit codes
 
 | Code | Meaning |

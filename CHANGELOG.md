@@ -4,6 +4,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## Unreleased
 
+## 0.1.1
+
+### Added
+
+- `./env`: `readOnlineTarget` and `applyOnlineEnv` for re-targeting a running process to the remote database/credentials and restoring it afterwards. Parameterized by `env.onlineSuffix`; no project credentials are interpreted.
+- `./cli`: `requireEnv(name, message?)`, which throws a plain `Error` (exit code 1) for hosts that treat missing variables as runtime failures.
+- `./cli`: `buildCli({ labels })` lets `describe` keep a host's existing exit-code and global-option wording.
+- `./commands`: `createDevCommands(config, { serverLocalFlag, strings })` adds the downstream `--local` switch and allows description/details/examples/option-description overrides without changing command ids.
+- `./local`: `ensureDevServices({ databaseUrl, endpoint })` overrides for benchmarks and ad-hoc scripts.
+
+### Changed
+
+- Built-in command examples derive from `identity.helpHint` instead of hardcoding `bun run dev`.
+
 ## 0.1.0
 
 ### Added

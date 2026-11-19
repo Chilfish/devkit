@@ -74,3 +74,16 @@ export function requireEnvVar(name: string, hint?: string): string {
   }
   return value
 }
+
+/**
+ * Read a required env var, throwing a plain `Error` (exit code 1).
+ *
+ * Use this when downstream treats a missing variable as a runtime failure
+ * rather than a configuration error. `message` replaces the default text.
+ */
+export function requireEnv(name: string, message?: string): string {
+  const value = process.env[name]
+  if (!value)
+    throw new Error(message ?? `Missing environment variable ${name}`)
+  return value
+}
