@@ -78,7 +78,7 @@ jobs:
         # 22.22 is the engines floor; the build toolchain itself needs Node >=22.
         node: [22.22, 24]
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist
