@@ -1,7 +1,28 @@
-import { one, two } from '../src/index'
+import { defineDevkit } from '../src/index'
 
-const sum = one + two
+const devkit = defineDevkit({
+  identity: {
+    name: 'devkit',
+    description: 'Demo project',
+  },
+  env: { file: '.dev.vars' },
+  database: {
+    localUrl: 'postgres://postgres@localhost:5432/devkit_dev',
+    proxyEndpoint: 'http://127.0.0.1:4444/sql',
+    migrations: 'drizzle',
+  },
+  storage: { bucket: 'devkit-data', publicBaseEnv: 'PUBLIC_BASE' },
+  dev: {
+    servers: [
+      {
+        name: 'astro',
+        command: 'astro',
+        args: ['dev'],
+      },
+    ],
+  },
+})
 
-console.log(`one = ${one}`)
-console.log(`two = ${two}`)
-console.log(`sum = ${sum}`)
+console.log(devkit.identity.name)
+console.log(devkit.database.localUrl)
+console.log(devkit.dev.servers.map(server => server.command).join(', '))

@@ -1,22 +1,24 @@
 {
-  "name": "starter-ts-lib",
+  "name": "@chilfish/devkit",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "packageManager": "bun@1.4.4",
-  "description": "A modern TypeScript library scaffold with tsdown, Vitest, ESLint and release automation.",
+  "description": "Reusable local development infrastructure: CLI runtime, env layering, local Postgres, Neon /sql proxy and SILO storage.",
   "author": "Chilfish",
   "license": "MIT",
-  "homepage": "https://github.com/Chilfish/starter-ts-lib#readme",
+  "homepage": "https://github.com/Chilfish/devkit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Chilfish/starter-ts-lib.git"
+    "url": "git+https://github.com/Chilfish/devkit.git"
   },
-  "bugs": "https://github.com/Chilfish/starter-ts-lib/issues",
+  "bugs": "https://github.com/Chilfish/devkit/issues",
   "keywords": [
-    "typescript",
-    "starter",
-    "template",
-    "library"
+    "devkit",
+    "cli",
+    "postgres",
+    "neon",
+    "silo",
+    "local-development"
   ],
   "sideEffects": false,
   "exports": {
@@ -30,6 +32,77 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./shared": {
+      "import": {
+        "types": "./dist/shared/index.d.ts",
+        "default": "./dist/shared/index.js"
+      },
+      "require": {
+        "types": "./dist/shared/index.d.cts",
+        "default": "./dist/shared/index.cjs"
+      }
+    },
+    "./cli": {
+      "import": {
+        "types": "./dist/cli/index.d.ts",
+        "default": "./dist/cli/index.js"
+      },
+      "require": {
+        "types": "./dist/cli/index.d.cts",
+        "default": "./dist/cli/index.cjs"
+      }
+    },
+    "./env": {
+      "import": {
+        "types": "./dist/env/index.d.ts",
+        "default": "./dist/env/index.js"
+      },
+      "require": {
+        "types": "./dist/env/index.d.cts",
+        "default": "./dist/env/index.cjs"
+      }
+    },
+    "./local": {
+      "import": {
+        "types": "./dist/local/index.d.ts",
+        "default": "./dist/local/index.js"
+      },
+      "require": {
+        "types": "./dist/local/index.d.cts",
+        "default": "./dist/local/index.cjs"
+      }
+    },
+    "./proxy": {
+      "import": {
+        "types": "./dist/proxy/index.d.ts",
+        "default": "./dist/proxy/index.js"
+      },
+      "require": {
+        "types": "./dist/proxy/index.d.cts",
+        "default": "./dist/proxy/index.cjs"
+      }
+    },
+    "./storage": {
+      "import": {
+        "types": "./dist/storage/index.d.ts",
+        "default": "./dist/storage/index.js"
+      },
+      "require": {
+        "types": "./dist/storage/index.d.cts",
+        "default": "./dist/storage/index.cjs"
+      }
+    },
+    "./commands": {
+      "import": {
+        "types": "./dist/commands/index.d.ts",
+        "default": "./dist/commands/index.js"
+      },
+      "require": {
+        "types": "./dist/commands/index.d.cts",
+        "default": "./dist/commands/index.cjs"
+      }
+    },
+    "./bin/proxy": "./dist/bin/proxy.js",
     "./package.json": "./package.json"
   },
   "main": "./dist/index.cjs",
@@ -41,7 +114,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.22"
   },
   "publishConfig": {
     "access": "public",
@@ -61,20 +134,38 @@
     "example": "bun examples/basic.ts",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:tag": "node scripts/verify-release-tag.mjs",
-    "start": "bun src/index.ts",
     "prepublishOnly": "bun run build",
     "release": "bumpp --commit \"chore(release): v{version}\" --tag --push",
     "prepare": "lefthook install"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.30.0",
+    "pg": ">=8.11.0"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20",
+    "commander": "^15.1.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^10.0.0",
     "@types/bun": "^1.4.4",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^5.1.1",
     "bumpp": "^12.3.0",
+    "drizzle-orm": "^0.45.4",
     "eslint": "^10.15.0",
     "eslint-plugin-format": "^2.0.1",
     "lefthook": "^2.2.2",
+    "pg": "^8.23.1",
     "tsdown": "^0.23.7",
     "typescript": "6.0.3",
     "vitest": "^5.1.1"
