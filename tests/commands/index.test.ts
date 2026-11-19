@@ -92,6 +92,13 @@ describe('createDevCommands', () => {
     expect(db?.options?.[0]?.description).toBe('目标数据库地址')
   })
 
+  it('reports a missing local flag as a config error', async () => {
+    delete process.env.LOCAL
+    const storage = group.commands.find(command => command.id === 'dev.storage')
+
+    await expect(storage!.run(context())).rejects.toMatchObject({ exitCode: 3 })
+  })
+
   it('switches the local flag when --local is used', async () => {
     const server = createDevCommands(config, { serverLocalFlag: true })
       .commands

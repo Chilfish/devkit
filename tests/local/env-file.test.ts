@@ -81,6 +81,42 @@ describe('ensureEnvFile', () => {
     expect(content).not.toContain('LOCAL=')
   })
 
+  it('saves the previous remote database when preserveRemote is set', () => {
+    process.env.LOCAL = '1'
+    writeFileSync(join(dir, '.dev.vars'), 'DATABASE_URL=postgres://user@db.example.com/app\n')
+
+    ensureEnvFile({
+      config,
+      databaseUrl,
+      endpoint,
+      cwd: dir,
+      preserveRemote: true,
+    })
+
+    const content = readFileSync(join(dir, '.dev.vars'), 'utf8')
+    expect(content).toContain('DATABASE_URL=postgres://postgres@localhost:5432/devkit_dev')
+    expect(content).toContain('DATABASE_URL_ONLINE=postgres://user@db.example.com/app')
+  })
+
+  it('does not overwrite an existing remote key when preserving', () => {
+    process.env.LOCAL = '1'
+    writeFileSync(join(dir, '.dev.vars'), [
+      'DATABASE_URL=postgres://user@db.example.com/app',
+      'DATABASE_URL_ONLINE=postgres://user@db.example.com/existing',
+    ].join('\n'))
+
+    ensureEnvFile({
+      config,
+      databaseUrl,
+      endpoint,
+      cwd: dir,
+      preserveRemote: true,
+    })
+
+    const content = readFileSync(join(dir, '.dev.vars'), 'utf8')
+    expect(content).toContain('DATABASE_URL_ONLINE=postgres://user@db.example.com/existing')
+  })
+
   it('does not touch the file in dry-run mode', () => {
     process.env.LOCAL = '1'
 

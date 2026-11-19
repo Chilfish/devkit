@@ -21,6 +21,11 @@ export interface EnsureEnvFileOptions {
   cwd?: string
   log?: LogLike
   dryRun?: boolean
+  /**
+   * In local mode, keep a pre-existing non-local `DATABASE_URL` as
+   * `DATABASE_URL<suffix>` before overwriting it.
+   */
+  preserveRemote?: boolean
 }
 
 /**
@@ -66,6 +71,16 @@ export function ensureEnvFile(options: EnsureEnvFileOptions): void {
 
   const content = readFileSync(path, 'utf8')
   if (local) {
+    if (options.preserveRemote && config.env.onlineSuffix) {
+      const parsed = parseEnvContent(content)
+      const remoteKey = `DATABASE_URL${config.env.onlineSuffix}`
+      const current = parsed.DATABASE_URL
+      if (current && !isLocalUrl(current) && parsed[remoteKey] === undefined) {
+        values[remoteKey] = current
+        log.info(`saved the previous DATABASE_URL as ${remoteKey}`)
+      }
+    }
+
     const next = upsertEnvValues(content, values)
     if (next !== content) {
       writeFileSync(path, next)

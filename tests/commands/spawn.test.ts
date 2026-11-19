@@ -95,6 +95,18 @@ describe('resolveServerSpawn', () => {
     expect(plan.executable).toBe(resolveBunBinary())
   })
 
+  it('does not duplicate the runtime when the command is the runtime itself', () => {
+    const cwd = tempDir()
+    const plan = resolveServerSpawn({
+      runtime: 'bun',
+      command: 'bun',
+      args: ['--cwd', 'apps/server', 'dev'],
+    }, [], cwd)
+
+    expect(plan.executable).toBe(resolveBunBinary())
+    expect(plan.args).toEqual(['--cwd', 'apps/server', 'dev'])
+  })
+
   it('runs an explicit path through the runtime', () => {
     const cwd = tempDir()
     const plan = resolveServerSpawn({

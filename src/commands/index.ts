@@ -2,7 +2,7 @@ import type { CommandGroup, CommandSpec } from '../cli'
 import type { DevkitConfig } from '../index'
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { Option } from 'commander'
 import { CliError, ConfigError } from '../cli'
 import { loadEnvFile } from '../env/index'
@@ -89,6 +89,12 @@ export function resolveServerSpawn(
     ...extraArgs,
   ]
   const runtime = runtimeBinary(server.runtime)
+
+  // `{ runtime: 'bun', command: 'bun' }` means "run bun with these arguments",
+  // not "run bun bun ...".
+  const runtimeName = basename(runtime).replace(/\.exe$/i, '').toLowerCase()
+  if (server.command.toLowerCase() === runtimeName)
+    return { executable: runtime, args, shell: false }
 
   if (server.command.includes('/') || server.command.includes('\\')) {
     return {
@@ -292,7 +298,7 @@ function devStorageSpec(config: DevkitConfig): CommandSpec {
     examples: [`${hint} dev storage`, `${flag}=1 ${hint} dev storage --json`],
     async run(ctx) {
       if (!isLocalMode(process.env, flag)) {
-        throw new CliError(`requires ${flag}=1 (can be set in ${config.env.file})`, {
+        throw new ConfigError(`requires ${flag}=1 (can be set in ${config.env.file})`, {
           code: 'NOT_LOCAL_MODE',
           hint: `Set ${flag}=1 in ${config.env.file}`,
         })

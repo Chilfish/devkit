@@ -80,6 +80,8 @@ async function getProxyHealth(endpoint: string): Promise<ProxyHealth | undefined
 export interface EnsureDevProxyOptions {
   config: DevkitConfig
   databaseUrl: string
+  /** Override the endpoint; defaults to `config.database.proxyEndpoint`. */
+  endpoint?: string
   log?: LogLike
   dryRun?: boolean
   /** Polling interval in milliseconds; tests override it. */
@@ -97,7 +99,7 @@ export interface EnsureDevProxyOptions {
  */
 export async function ensureDevProxy(options: EnsureDevProxyOptions): Promise<void> {
   const log = options.log ?? createLogger({ name: 'dev.proxy' })
-  const endpoint = options.config.database.proxyEndpoint
+  const endpoint = options.endpoint ?? options.config.database.proxyEndpoint
 
   if (!isLocalUrl(endpoint)) {
     log.info(`proxy endpoint is not local, skipping the development proxy: ${endpoint}`)

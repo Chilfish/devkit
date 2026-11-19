@@ -4,6 +4,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## Unreleased
 
+## 0.1.4
+
+### Added
+
+- `ensureEnvFile({ preserveRemote: true })` and `ensureDevServices({ preserveRemote: true })` keep a previous non-local `DATABASE_URL` as `DATABASE_URL<suffix>` before switching the file to local values.
+
+### Fixed
+
+- `ensureDevServices` now passes its `endpoint` override (and `NEON_HTTP_ENDPOINT`) through to `ensureDevProxy`; previously the proxy always used `config.database.proxyEndpoint`.
+- `{ runtime: 'bun', command: 'bun' }` runs `bun <args>` instead of `bun bun <args>`; the same applies to `node`.
+- `dev storage` without the local flag now reports `NOT_LOCAL_MODE` as a config error (exit code 3) instead of exit code 1.
+
 ## 0.1.3
 
 ### Fixed

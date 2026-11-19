@@ -29,6 +29,7 @@ Brings up the local stack, then starts every configured server.
 - Signals are forwarded to all servers; the first non-zero exit code becomes the command exit code.
 - `--local` (when `serverLocalFlag` is enabled) sets `<localFlag>=1` and reloads the env file.
 - A bare `command` is resolved through `node_modules/<command>/package.json` → `bin` and run with the configured runtime. If no manifest entry exists, a Windows `.cmd` / `.bat` / `.exe` shim is executed directly instead of being passed to `node`.
+- `command` equal to the runtime itself (`runtime: 'bun', command: 'bun'`) runs the runtime with the given arguments, without duplicating it.
 - `--dry-run` reports the planned processes without starting anything.
 
 ```bash
@@ -53,7 +54,7 @@ Runs the Neon-compatible `/sql` proxy in the foreground. Only local `DATABASE_UR
 
 ## `dev storage`
 
-Requires the local flag. Starts SILO, creates the bucket and applies the anonymous read policy. Fails with `STORAGE_UNAVAILABLE` when no binary is found.
+Requires the local flag. Starts SILO, creates the bucket and applies the anonymous read policy. Fails with `NOT_LOCAL_MODE` (exit 3) without the flag, and `STORAGE_UNAVAILABLE` (exit 1) when no binary is found.
 
 ## Plan output
 

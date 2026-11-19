@@ -28,7 +28,9 @@ The background entry is resolved by absolute path inside the package, never from
 1. Process environment wins over the file.
 2. The local flag resolves as process environment > file.
 3. Local mode: ignore `<KEY>_ONLINE`, force `DATABASE_URL` and `NEON_HTTP_ENDPOINT` to local values, derive the public media base.
-4. Remote mode: expand `<KEY>_ONLINE` into `<KEY>`; if `DATABASE_URL` still points at localhost, clear it and warn.
+4. Remote mode: expand `<KEY><suffix>` into `<KEY>`; if `DATABASE_URL` still points at localhost, clear it and warn.
+
+`ensureEnvFile({ preserveRemote: true })` saves a previous non-local `DATABASE_URL` as `DATABASE_URL<suffix>` before switching the file to local values.
 
 The banner prints mode, database host/name and storage address only. It never prints credentials.
 

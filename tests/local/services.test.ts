@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createLogger } from '../../src/cli/index'
-import { ensureDevServices } from '../../src/local/index'
+import { ensureDevProxy, ensureDevServices } from '../../src/local/index'
 import { createConfig } from '../testkit/config'
 
 const config = createConfig()
@@ -36,5 +36,25 @@ describe('ensureDevServices overrides', () => {
 
     expect(result.local).toBe(false)
     expect(result.databaseUrl).toBe('postgres://user@db.example.com:5432/app')
+  })
+})
+
+describe('ensureDevProxy endpoint override', () => {
+  it('uses the override in the dry-run plan', async () => {
+    const messages: string[] = []
+    const capture = createLogger({
+      name: 'test',
+      write: (_stream, line) => messages.push(line),
+    })
+
+    await ensureDevProxy({
+      config,
+      databaseUrl: 'postgres://postgres@localhost:5432/postgres',
+      endpoint: 'http://127.0.0.1:4599/sql',
+      dryRun: true,
+      log: capture,
+    })
+
+    expect(messages.join('\n')).toContain('http://127.0.0.1:4599/sql')
   })
 })
