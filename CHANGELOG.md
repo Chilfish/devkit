@@ -17,6 +17,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Changed
 
 - Built-in command examples derive from `identity.helpHint` instead of hardcoding `bun run dev`.
+- CI actions bumped to `checkout@v7`, `setup-node@v7`, `upload-artifact@v7` and `download-artifact@v8`; docs and the pitfall checklist follow the new majors.
 
 ## 0.1.0
 

@@ -39,6 +39,6 @@ The toolchain (`tsdown`, TypeScript) requires Node ≥22, and `engines.node` is 
 
 ## Changing workflows
 
-1. Verify action versions exist (`checkout@v4`, `setup-bun@v2`, `setup-node@v4`).
+1. Verify action versions exist (`checkout@v7`, `setup-bun@v2`, `setup-node@v7`, `upload-artifact@v7`, `download-artifact@v8`).
 2. Reflect release changes in [build-and-release](./build-and-release.md).
 3. Add new gates to [release-checklist](./release-checklist.md).

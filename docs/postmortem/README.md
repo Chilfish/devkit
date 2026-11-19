@@ -25,7 +25,7 @@ Run through this before changing code or configuration.
 
 ### CI and release
 
-- Do the action versions exist? (`checkout@v4`, `setup-bun@v2`, `setup-node@v4`)
+- Do the action versions exist? (`checkout@v7`, `setup-bun@v2`, `setup-node@v7`, `upload-artifact@v7`, `download-artifact@v8`)
 - Is publishing still OIDC-based, with no `NPM_TOKEN` or `registry-url`?
 - Does `CHANGELOG.md` contain the version section, and does the tag match `package.json#version`?
 
