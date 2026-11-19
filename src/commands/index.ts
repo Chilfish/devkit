@@ -13,7 +13,6 @@ import {
   ensurePostgresRunning,
   resolveBunBinary,
 } from '../local'
-import { startProxy } from '../proxy'
 import { isLocalMode, isLocalUrl } from '../shared/index'
 import { ensureSiloRunning } from '../storage'
 
@@ -127,6 +126,9 @@ function devProxySpec(config: DevkitConfig): CommandSpec {
         }
       }
 
+      // Imported lazily: the proxy entry requires `pg`, which is an optional peer.
+      // Loading it eagerly would break `dev --help` for projects without `pg`.
+      const { startProxy } = await import('../proxy')
       const proxy = startProxy({ databaseUrl, port })
       ctx.log.info(`${proxy.url}/sql -> ${target.host}${target.pathname}`)
 

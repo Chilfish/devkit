@@ -1,7 +1,23 @@
 import type { LogLike } from '../shared/index'
+import { CliError } from '../cli/exit'
 import { createLogger } from '../cli/logger'
 
 const DATABASE_NAME_PATTERN = /^[a-z0-9_]+$/
+
+/** Load an optional peer and turn a missing install into an actionable error. */
+async function importPeer<T>(name: string, importer: () => Promise<T>): Promise<T> {
+  try {
+    return await importer()
+  }
+  catch (error) {
+    throw new CliError(`Local database support requires the "${name}" package`, {
+      code: 'MISSING_PEER',
+      hint: 'bun add pg drizzle-orm',
+      context: { package: name },
+      cause: error,
+    })
+  }
+}
 
 /** Create the target database when it does not exist. Database names are whitelisted before interpolation. */
 export async function ensureDatabase(
@@ -18,7 +34,7 @@ export async function ensureDatabase(
     return
   }
 
-  const { Client } = await import('pg')
+  const { Client } = await importPeer('pg', () => import('pg'))
   const admin = new URL(databaseUrl)
   admin.pathname = '/postgres'
   const client = new Client({
@@ -51,11 +67,11 @@ export async function applyMigrations(
     return
   }
 
-  const [{ Pool }, { drizzle }, { migrate }] = await Promise.all([
+  const [{ Pool }, { drizzle }, { migrate }] = await importPeer('pg + drizzle-orm', () => Promise.all([
     import('pg'),
     import('drizzle-orm/node-postgres'),
     import('drizzle-orm/node-postgres/migrator'),
-  ])
+  ]))
 
   const pool = new Pool({ connectionString: databaseUrl })
   try {
