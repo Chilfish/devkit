@@ -1,7 +1,7 @@
 {
   "name": "@chilfish/devkit",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packageManager": "bun@1.4.4",
   "description": "Reusable local development infrastructure: CLI runtime, env layering, local Postgres, Neon /sql proxy and SILO storage.",
   "author": "Chilfish",
