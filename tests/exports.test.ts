@@ -38,7 +38,7 @@ const ENTRIES = [
 describe('package manifest', () => {
   it('is the published package', () => {
     expect(manifest.name).toBe('@chilfish/devkit')
-    expect(manifest.version).toBe('0.1.0')
+    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
   it('marks the package as side-effect free', () => {
