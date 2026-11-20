@@ -4,7 +4,8 @@ import { defineConfig } from 'tsdown'
  * Three build targets:
  * - neutral: `.` and `./shared`, no node/bun builtins, safe for Workers and browsers;
  * - node: CLI, env, local, storage and commands, may use `node:*`;
- * - bun: `./proxy` and `./bin/proxy`, using `Bun.serve` and a shebang.
+ * - bun runtime: `./proxy` (`Bun.serve`, `pg`) and `./bin/proxy` (shebang). tsdown
+ *   has no `bun` platform, so both use `node`, which only decides what is bundled.
  *
  * `exports` is maintained by hand in package.json; the build never rewrites it.
  */
@@ -54,7 +55,9 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     clean: false,
-    platform: 'neutral',
+    // tsdown has no `bun` platform: `node` keeps `pg` external instead of
+    // bundling it. This entry still calls `Bun.serve` and is Bun-only at runtime.
+    platform: 'node',
     target: 'es2022',
     outExtensions,
     exports: false,
@@ -66,6 +69,7 @@ export default defineConfig([
     format: ['esm'],
     dts: false,
     clean: false,
+    // Bun-only executable; `node` is the closest available platform.
     platform: 'node',
     target: 'es2022',
     outExtensions,

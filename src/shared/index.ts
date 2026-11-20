@@ -43,10 +43,29 @@ export function isLocalMode(env: EnvRecord, localFlag = 'LOCAL'): boolean {
   return value === '1' || value === 'true' || value === 'yes'
 }
 
+const ENV_LINE = /^\s*([\w.-]+)\s*=/
+const INLINE_COMMENT = /\s+#/
+
+/** Strip a matching quote pair and an unquoted trailing `# comment`. */
+function parseEnvValue(raw: string): string {
+  const value = raw.trim()
+  const quote = value[0]
+  if ((quote === '"' || quote === '\'') && value.length > 1) {
+    const end = value.indexOf(quote, 1)
+    if (end !== -1)
+      return value.slice(1, end)
+  }
+  const comment = INLINE_COMMENT.exec(value)
+  return (comment
+    ? value.slice(0, comment.index)
+    : value).trim()
+}
+
 /**
  * Parse `.dev.vars` / `.env` style content.
  *
- * No variable expansion; `KEY=a=b` splits on the first `=`. Matching quotes are removed.
+ * No variable expansion; `KEY=a=b` splits on the first `=`. Matching quotes are
+ * removed together with an unquoted trailing comment. Keys may contain `.` and `-`.
  */
 export function parseEnvContent(content: string): Record<string, string> {
   const values: Record<string, string> = {}
@@ -60,14 +79,7 @@ export function parseEnvContent(content: string): Record<string, string> {
     const key = trimmed.slice(0, separator).trim()
     if (!key)
       continue
-    let value = trimmed.slice(separator + 1).trim()
-    if (
-      (value.startsWith('"') && value.endsWith('"'))
-      || (value.startsWith('\'') && value.endsWith('\''))
-    ) {
-      value = value.slice(1, -1)
-    }
-    values[key] = value
+    values[key] = parseEnvValue(trimmed.slice(separator + 1))
   }
   return values
 }
@@ -77,15 +89,19 @@ export function parseEnvContent(content: string): Record<string, string> {
  * `*_ONLINE`) and append missing ones.
  *
  * Used to point an env file at local services without destroying other settings.
+ * The original line ending (LF or CRLF) is preserved.
  */
 export function upsertEnvValues(content: string, values: Record<string, string>): string {
+  const eol = content.includes('\r\n')
+    ? '\r\n'
+    : '\n'
   const pending = new Map(Object.entries(values))
   const lines = content.length > 0
     ? content.split(/\r?\n/)
     : []
   while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
   const result = lines.map((line) => {
-    const match = /^\s*(\w+)\s*=/.exec(line)
+    const match = ENV_LINE.exec(line)
     if (!match)
       return line
     const key = match[1] as string
@@ -96,7 +112,7 @@ export function upsertEnvValues(content: string, values: Record<string, string>)
     return `${key}=${value}`
   })
   for (const [key, value] of pending) result.push(`${key}=${value}`)
-  return `${result.join('\n').replace(/\n+$/, '')}\n`
+  return `${result.join(eol).replace(/(?:\r?\n)+$/, '')}${eol}`
 }
 
 /** Anonymous read base for the local bucket: path-style, `<endpoint>/<bucket>`. */

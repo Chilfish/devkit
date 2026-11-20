@@ -61,6 +61,16 @@ describe('parseEnvContent', () => {
       .toEqual({ A: 'quoted', B: 'single', C: '"mismatch\'' })
   })
 
+  it('drops an unquoted inline comment', () => {
+    expect(parseEnvContent('A=value # note\nB="quoted" # note\nC=http://x/#frag'))
+      .toEqual({ A: 'value', B: 'quoted', C: 'http://x/#frag' })
+  })
+
+  it('accepts dotted and dashed keys', () => {
+    expect(parseEnvContent('PG.HOST=localhost\nMY-KEY=1'))
+      .toEqual({ 'PG.HOST': 'localhost', 'MY-KEY': '1' })
+  })
+
   it('skips lines without a key', () => {
     expect(parseEnvContent('=value\nKEY=value')).toEqual({ KEY: 'value' })
   })
@@ -80,6 +90,15 @@ describe('upsertEnvValues', () => {
 
   it('normalizes trailing newlines', () => {
     expect(upsertEnvValues('A=1\n\n\n', { A: '2' })).toBe('A=2\n')
+  })
+
+  it('preserves CRLF line endings', () => {
+    expect(upsertEnvValues('A=1\r\nB=2\r\n', { B: '3', C: '4' })).toBe('A=1\r\nB=3\r\nC=4\r\n')
+  })
+
+  it('updates dotted and dashed keys', () => {
+    expect(upsertEnvValues('PG.HOST=old\nMY-KEY=old\n', { 'PG.HOST': 'new', 'MY-KEY': 'new' }))
+      .toBe('PG.HOST=new\nMY-KEY=new\n')
   })
 })
 
