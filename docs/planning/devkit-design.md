@@ -145,7 +145,7 @@ Field constraints:
 | `storage.dataDir` | no | `temp/silo-data` | SILO data directory |
 | `storage.publicBaseEnv` | no | — | Variable receiving the derived media base in local mode |
 | `paths.logs` | no | `logs` | Background service log directory |
-| `dev.servers` | yes | — | At least one; see 6.6 |
+| `dev.servers` | no | `[]` | May be empty; `dev server` then reports `NO_DEV_SERVERS` |
 
 `defineDevkit` only validates and freezes: no file reads, no `process.env` writes, no output.
 

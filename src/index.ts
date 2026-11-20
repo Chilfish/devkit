@@ -63,7 +63,7 @@ export interface DevkitServerConfig {
 }
 
 export interface DevkitDevConfig {
-  /** At least one dev server. */
+  /** Dev servers; empty when the project only uses the env, database or proxy helpers. */
   servers: DevkitServerConfig[]
 }
 
@@ -73,7 +73,7 @@ export interface DevkitConfigInput {
   database: DevkitDatabaseConfig
   storage?: DevkitStorageConfig
   paths?: DevkitPathsConfig
-  dev: DevkitDevConfig
+  dev?: DevkitDevConfig
 }
 
 export interface DevkitConfig {
@@ -180,10 +180,10 @@ export function defineDevkit(input: DevkitConfigInput): DevkitConfig {
 
   const logs = optionalString(input.paths?.logs, 'paths.logs') ?? 'logs'
 
-  if (!Array.isArray(input.dev?.servers) || input.dev.servers.length === 0)
-    throw new DevkitConfigError('dev.servers', 'at least one dev server is required')
+  if (input.dev !== undefined && !Array.isArray(input.dev.servers))
+    throw new DevkitConfigError('dev.servers', 'must be an array of servers')
 
-  const servers = input.dev.servers.map((server, index) => {
+  const servers = (input.dev?.servers ?? []).map((server, index) => {
     const runtime = server.runtime ?? 'node'
     if (runtime !== 'node' && runtime !== 'bun')
       throw new DevkitConfigError(`dev.servers[${index}].runtime`, 'must be "node" or "bun"')

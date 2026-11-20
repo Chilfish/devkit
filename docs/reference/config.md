@@ -20,7 +20,7 @@
 | `storage.dataDir` | no | `temp/silo-data` | SILO data directory |
 | `storage.publicBaseEnv` | no | — | Variable that receives the derived public base in local mode |
 | `paths.logs` | no | `logs` | Background service log directory |
-| `dev.servers` | yes | — | At least one server |
+| `dev.servers` | no | `[]` | Dev servers; omit it when the project only uses the env, database or proxy helpers |
 
 ## Dev servers
 
@@ -39,7 +39,7 @@ Arguments after `--` on `dev server` are appended to the first server only.
 
 - `identity.name`, `identity.description`, `env.file`, `database.migrations`, server names and commands must be non-empty strings.
 - `database.localUrl` and `database.proxyEndpoint` must be local URLs.
-- `dev.servers` must contain at least one entry.
+- `dev.servers` is optional and defaults to `[]`; `dev server` then fails with `NO_DEV_SERVERS` (exit 3).
 - Every server `runtime` must be `node` or `bun`; `args` must be an array of strings.
 - The result is frozen at every level.
 

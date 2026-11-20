@@ -87,9 +87,17 @@ describe('defineDevkit', () => {
     }
   })
 
-  it('requires at least one dev server', () => {
-    expect(() => defineDevkit(createConfigInput({
+  it('allows a project without dev servers', () => {
+    const config = defineDevkit(createConfigInput({
       dev: { servers: [] },
+    }))
+    expect(config.dev.servers).toEqual([])
+    expect(defineDevkit(createConfigInput({ dev: undefined })).dev.servers).toEqual([])
+  })
+
+  it('rejects a non-array server list', () => {
+    expect(() => defineDevkit(createConfigInput({
+      dev: { servers: 'nope' as unknown as [] },
     }))).toThrow(/dev.servers/)
   })
 })
