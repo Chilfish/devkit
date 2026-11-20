@@ -12,12 +12,11 @@ import type { LogLike } from '../shared/index'
  * A missing binary does not block development: the call returns
  * `started: false` with a reason, and the caller decides whether to warn or fail.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, openSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { AwsClient } from 'aws4fetch'
 import { createLogger } from '../cli/logger'
-import { commandOutput, readLogTail, resolveLogPath, sleep } from '../local/util'
+import { commandOutput, readLogTail, resolveLogPath, sleep, spawnDetached } from '../local/util'
 import { isLocalMode, isLocalUrl, localBucket, localEndpoint } from '../shared/index'
 
 export const DEFAULT_LOCAL_ACCESS_KEY = 'silo-admin'
@@ -188,7 +187,6 @@ export async function ensureSiloRunning(options: EnsureSiloOptions): Promise<Sil
   const port = parsed.port || '9000'
   const consolePort = process.env.SILO_CONSOLE_PORT ?? String(Number(port) + 1)
   const logFile = resolveLogPath(config.paths.logs, 'silo.log')
-  const fd = openSync(logFile, 'a')
   const env = {
     ...process.env,
     MINIO_ROOT_USER: credentials.accessKeyId,
@@ -205,28 +203,7 @@ export async function ensureSiloRunning(options: EnsureSiloOptions): Promise<Sil
   ]
 
   log.info(`starting SILO (${dataDir}) ...`)
-  const child = process.platform === 'win32'
-    ? spawn('cmd.exe', [
-        '/c',
-        'start',
-        '',
-        '/b',
-        binary,
-        ...args,
-      ], {
-        cwd: process.cwd(),
-        detached: true,
-        windowsHide: true,
-        stdio: ['ignore', fd, fd],
-        env,
-      })
-    : spawn(binary, args, {
-        cwd: process.cwd(),
-        detached: true,
-        stdio: ['ignore', fd, fd],
-        env,
-      })
-  child.unref()
+  spawnDetached({ command: binary, args, logFile, env })
 
   const attempts = options.attempts ?? 50
   const interval = options.pollIntervalMs ?? 200

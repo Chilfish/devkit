@@ -1,12 +1,11 @@
 import type { DevkitConfig } from '../index'
 import type { LogLike } from '../shared/index'
-import { spawn } from 'node:child_process'
-import { existsSync, openSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createLogger } from '../cli/logger'
 import { isLocalUrl } from '../shared/index'
-import { readLogTail, resolveLogPath, sleep } from './util'
+import { readLogTail, resolveLogPath, sleep, spawnDetached } from './util'
 
 export interface ProxyHealth {
   ok: boolean
@@ -129,7 +128,6 @@ export async function ensureDevProxy(options: EnsureDevProxyOptions): Promise<vo
   }
 
   const logFile = resolveLogPath(options.config.paths.logs, 'dev-proxy.log')
-  const fd = openSync(logFile, 'a')
   const port = new URL(endpoint).port || '4444'
   const entry = resolveProxyEntry()
   const bun = resolveBunBinary()
@@ -139,26 +137,12 @@ export async function ensureDevProxy(options: EnsureDevProxyOptions): Promise<vo
     DEVKIT_PROXY_PORT: port,
   }
 
-  if (process.platform === 'win32') {
-    // `start` detaches the proxy from the parent process tree; taskkill /T and closing the terminal leave it running.
-    const child = spawn('cmd.exe', ['/c', 'start', '', '/b', bun, entry], {
-      cwd: process.cwd(),
-      detached: true,
-      windowsHide: true,
-      stdio: ['ignore', fd, fd],
-      env,
-    })
-    child.unref()
-  }
-  else {
-    const child = spawn(bun, [entry], {
-      cwd: process.cwd(),
-      detached: true,
-      stdio: ['ignore', fd, fd],
-      env,
-    })
-    child.unref()
-  }
+  spawnDetached({
+    command: bun,
+    args: [entry],
+    logFile,
+    env,
+  })
   log.info(`starting development proxy (log ${join(options.config.paths.logs, 'dev-proxy.log')})`)
 
   const attempts = options.attempts ?? 50
