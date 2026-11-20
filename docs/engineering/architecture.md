@@ -13,7 +13,7 @@ A reusable local-development package: one source for CLI runtime, env layering, 
 | `./cli` | Command specs, runtime, logger | node | no |
 | `./env` | Env file loading and banner | node | no |
 | `./local` | Postgres, database, migrations, orchestration | node | no |
-| `./proxy` | Neon `/sql` proxy | Bun | no |
+| `./proxy` | Neon `/sql` proxy | Bun runtime (node bundle) | no |
 | `./storage` | SILO lifecycle and bucket policy | node | no |
 | `./commands` | `createDevCommands` | node | no |
 | `./bin/proxy` | Executable background proxy | Bun | no |
@@ -60,8 +60,8 @@ Dependency direction: `commands → local → storage/util`, `cli → env → sh
 
 1. neutral: `.` and `./shared`
 2. node: `./cli`, `./env`, `./local`, `./storage`, `./commands`
-3. neutral/Bun: `./proxy`
-4. node/Bun: `./bin/proxy` (ESM only, shebang preserved)
+3. neutral/Bun runtime: `./proxy` (tsdown has no `bun` platform, so it builds with `node` and `pg` stays external; the code still calls `Bun.serve`)
+4. node/Bun runtime: `./bin/proxy` (ESM only, shebang preserved)
 
 Output uses `.js` / `.cjs` and `.d.ts` / `.d.cts` extensions.
 

@@ -4,6 +4,33 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## Unreleased
 
+### Added
+
+- `dev status`: read-only report of Postgres reachability, proxy `/health` and SILO health. Down services are reported as `running: false`.
+- `describe --json` now returns the command tree in the standard envelope (`data`, `error`, `meta`); human mode keeps the pretty JSON output.
+- `createProxyHandler({ pool })` test seam, plus `parseBatchOptions` / `batchBeginStatement` exports from `./proxy`.
+- `findProjectRoot` exported from `./commands`.
+- Integration test that drives the official `@neondatabase/serverless` client against the background proxy entry.
+
+### Changed
+
+- `dev.servers` is optional and defaults to `[]`; `dev server` then fails with `NO_DEV_SERVERS` (exit 3) instead of rejecting the config.
+- `dev server --json` routes child stdout to stderr, so stdout keeps exactly one envelope line.
+- `resolveServerSpawn` resolves `node_modules` from the nearest package root instead of `process.cwd()`.
+- Windows `.cmd` / `.bat` servers run through `cmd.exe /d /s /c` with quoted arguments instead of `shell: true`.
+- Proxy and SILO background processes use one `spawnDetached` helper.
+- CI adds a Postgres integration job and a Windows job; coverage thresholds (63 / 57 / 62 / 64) are enforced.
+- `scripts/verify-package.mjs` derives artifact checks from `package.json#exports` and supports npm 12's `pack --json` shape.
+
+### Fixed
+
+- The proxy runs batch queries on one connection inside `BEGIN` / `COMMIT`, honors the Neon batch headers and rolls back on failure; `transaction()` is atomic again.
+- Proxy HTTP 400 bodies now include PostgreSQL error fields (`code`, `severity`, `detail`, `hint`, `constraint`, ...), restoring SQLSTATE branching downstream.
+- Windows background services wrote no output to `dev-proxy.log` / `silo.log` because `cmd /c start` dropped the inherited descriptor; direct detached spawn captures it and still survives the parent.
+- `readLogTail` reads only the last 64 KB instead of the whole file.
+- `upsertEnvValues` preserves CRLF; the env parser handles inline comments and dotted / dashed keys.
+- `verify-package` no longer silently passes with an empty tarball file list under npm 12.
+
 ## 0.1.4
 
 ### Added

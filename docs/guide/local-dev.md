@@ -17,9 +17,17 @@ workerd (astro dev / preview) cannot open TCP connections, and `@neondatabase/se
 - `POST /sql` with `{ query, params }` or `{ queries: [...] }`
 - `GET /health` with pid, host, database and counters
 
+Batch requests run on one pooled connection inside `BEGIN` / `COMMIT`, honoring `Neon-Batch-Isolation-Level`, `Neon-Batch-Read-Only` and `Neon-Batch-Deferrable`, so the driver's `transaction()` stays atomic. A failing statement rolls the whole batch back.
+
+PostgreSQL error fields (`code`, `severity`, `detail`, `hint`, `constraint`, ...) are returned in the HTTP 400 body, so callers can keep branching on SQLSTATE (for example `23505`).
+
 Only local database URLs are accepted, so a remote database is never exposed on localhost.
 
 The background entry is resolved by absolute path inside the package, never from `cwd` or the host project's scripts.
+
+## Status
+
+`dev status` reports Postgres reachability, proxy health and SILO health without starting anything. It never stops services: devkit does not own the system Postgres instance.
 
 ## Environment layering
 

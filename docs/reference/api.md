@@ -11,9 +11,9 @@ Eight typed entries plus one executable entry. `package.json#exports` and `tests
 | `@chilfish/devkit/cli` | `CommandSpec`, `CommandGroup`, `CommandContext`, `buildCli`, `runCli`, `describeCli`, `createLogger`, `requireEnv`, `requireEnvVar`, envelope and exit helpers | node |
 | `@chilfish/devkit/env` | `loadEnvFile`, `describeEnvironment`, `readEnvFile`, `readOnlineTarget`, `applyOnlineEnv` | node |
 | `@chilfish/devkit/local` | `ensureDevServices` (with `databaseUrl` / `endpoint` overrides), `findProxyEntry`, Postgres / database / migration / env-file / proxy helpers | node |
-| `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy` | Bun |
+| `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy`, `parseBatchOptions`, `batchBeginStatement` (plus `ProxyPool` for tests) | Bun |
 | `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
-| `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand`, `resolvePackageBin`, `resolveServerSpawn` | node |
+| `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand`, `resolvePackageBin`, `resolveServerSpawn`, `findProjectRoot` | node |
 | `@chilfish/devkit/bin/proxy` | Executable background proxy entry | Bun |
 
 ## Root
@@ -69,7 +69,7 @@ const { databaseUrl, endpoint } = await ensureDevServices({
 import { createProxyHandler, startProxy } from '@chilfish/devkit/proxy'
 ```
 
-`createProxyHandler({ databaseUrl })` returns a request handler plus `close()`. `startProxy({ databaseUrl, port })` wraps it with `Bun.serve` and returns `{ url, port, close }`.
+`createProxyHandler({ databaseUrl, pool? })` returns a request handler plus `close()`. `pool` is a test seam; by default a `pg.Pool` is created lazily. `startProxy({ databaseUrl, port })` wraps it with `Bun.serve` and returns `{ url, port, close }`. Batches run in one transaction; PostgreSQL error fields are forwarded on HTTP 400.
 
 ## Storage
 

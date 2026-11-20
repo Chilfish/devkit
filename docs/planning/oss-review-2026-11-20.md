@@ -1,7 +1,8 @@
 # OSS review 2026-11-20
 
-> Status: in progress. Scope: source, tests, CI, docs, packaging and Neon protocol compatibility.
+> Status: implemented (2026-11-20). Scope: source, tests, CI, docs, packaging and Neon protocol compatibility.
 > This document records findings and the execution backlog. When the document and code disagree, the code wins and this document is fixed in the same change.
+> Follow-up work (not in this change): `dev stop` with pid files and an ownership check.
 
 ## Method
 
@@ -65,7 +66,9 @@ SILO is a MinIO fork maintained outside this repository, yet it is a runtime dep
 
 ### R-06 (P1) No lifecycle beyond start
 
-There is no `status` or `stop`. Background services survive the terminal; stopping them requires `pg_ctl`, `taskkill` or Task Manager. `stop` was deliberately not implemented in this change because devkit does not own the Postgres instance (stopping it would affect unrelated projects) and SILO exposes no pid. See "Rejected in this change".
+There was no `status` or `stop`. Background services survive the terminal; stopping them requires `pg_ctl`, `taskkill` or Task Manager.
+
+Resolved in part: `dev status` now reports Postgres, proxy and SILO state. `stop` was deliberately not implemented: devkit does not own the Postgres instance (stopping it would affect unrelated projects) and SILO exposes no pid. See "Rejected in this change".
 
 ### R-07 (P1) Project root is `process.cwd()`
 
@@ -120,22 +123,22 @@ Status values: `done`, `in progress`, `backlog`.
 
 | ID | Priority | Change | Status | Acceptance |
 |---|---|---|---|---|
-| R-01 | P0 | Run Neon batches on one client inside `BEGIN` / `COMMIT`, honor batch headers | in progress | unit tests assert `BEGIN`/`COMMIT`/`ROLLBACK` and isolation clauses; integration test proves `transaction()` rollback |
-| R-02 | P0 | Return PostgreSQL error fields on HTTP 400 | in progress | unit test maps `code` / `detail` / `constraint`; integration test sees `23505` |
-| R-03 | P0 | Add `@neondatabase/serverless` integration test | in progress | `neon().query`, `transaction()` and unique-violation code run against a real database when `DEVKIT_PG_SMOKE=1` |
-| R-04 | P0 | CI: Postgres integration job, Windows job, coverage thresholds | in progress | both jobs pass; `test:coverage` fails below the thresholds |
+| R-01 | P0 | Run Neon batches on one client inside `BEGIN` / `COMMIT`, honor batch headers | done | unit tests assert `BEGIN`/`COMMIT`/`ROLLBACK` and isolation clauses; integration test proves `transaction()` rollback |
+| R-02 | P0 | Return PostgreSQL error fields on HTTP 400 | done | unit test maps `code` / `detail` / `constraint`; integration test sees `23505` |
+| R-03 | P0 | Add `@neondatabase/serverless` integration test | done | `neon().query`, `transaction()` and unique-violation code run against a real database when `DEVKIT_PG_SMOKE=1` |
+| R-04 | P0 | CI: Postgres integration job, Windows job, coverage thresholds | done | both jobs pass; `test:coverage` fails below the thresholds |
 | R-05 | P1 | Record scope decision; keep containerization out of scope | done (documented) | this document states the boundary |
-| R-06 | P1 | Add `dev status`; document why `stop` is deferred | in progress | `dev status --json` returns deterministic output in remote mode |
-| R-07 | P1 | Resolve servers from the nearest project root | in progress | test runs from a nested directory and finds the root `node_modules` |
-| R-08 | P1 | Build a quoted command line and spawn `cmd.exe` without `shell: true` | in progress | no `DEP0190` at runtime; metacharacters in forwarded args stay quoted |
-| R-09 | P1 | Extract one detached spawn helper | in progress | proxy and SILO use the helper; Windows path unit-tested |
-| R-10 | P1 | Read only the tail window of a log file | in progress | test with a log larger than the window returns the last lines |
-| R-11 | P1 | Route child stdout to stderr in JSON mode | in progress | `dev server --json` keeps one envelope line on stdout |
-| R-12 | P1 | Register `describe` as a normal command | in progress | `describe` keeps human output; `describe --json` returns an envelope |
-| R-13 | P2 | Make `dev.servers` optional | in progress | config without `dev` is valid; `dev server` reports `NO_DEV_SERVERS` |
-| R-14 | P2 | Preserve EOL, parse inline comments, allow `.` / `-` keys | in progress | unit tests cover CRLF, quoted-with-comment and dotted keys |
-| R-15 | P2 | Fix proxy platform label; derive package verification from `exports` | in progress | build passes; `verify:package` no longer duplicates the entry list |
-| R-16 | P2 | Sync docs and CHANGELOG with the changes | in progress | `check:docs` passes; CHANGELOG lists added/changed/fixed |
+| R-06 | P1 | Add `dev status`; document why `stop` is deferred | done | `dev status --json` returns deterministic output in remote mode |
+| R-07 | P1 | Resolve servers from the nearest project root | done | test runs from a nested directory and finds the root `node_modules` |
+| R-08 | P1 | Build a quoted command line and spawn `cmd.exe` without `shell: true` | done | no `DEP0190` at runtime; metacharacters in forwarded args stay quoted |
+| R-09 | P1 | Extract one detached spawn helper | done | proxy and SILO use the helper; Windows path unit-tested |
+| R-10 | P1 | Read only the tail window of a log file | done | test with a log larger than the window returns the last lines |
+| R-11 | P1 | Route child stdout to stderr in JSON mode | done | `dev server --json` keeps one envelope line on stdout |
+| R-12 | P1 | Register `describe` as a normal command | done | `describe` keeps human output; `describe --json` returns an envelope |
+| R-13 | P2 | Make `dev.servers` optional | done | config without `dev` is valid; `dev server` reports `NO_DEV_SERVERS` |
+| R-14 | P2 | Preserve EOL, parse inline comments, allow `.` / `-` keys | done | unit tests cover CRLF, quoted-with-comment and dotted keys |
+| R-15 | P2 | Fix proxy platform label; derive package verification from `exports` | done | build passes; `verify:package` no longer duplicates the entry list |
+| R-16 | P2 | Sync docs and CHANGELOG with the changes | done | `check:docs` passes; CHANGELOG lists added/changed/fixed |
 
 ## Peer comparison
 
