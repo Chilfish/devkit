@@ -40,6 +40,7 @@ Only these changes require a document before code; everything else gets a same-d
 | [planning/README.md](./planning/README.md) | Planning directory conventions and status |
 | [planning/current-state.md](./planning/current-state.md) | Audit of duplicated infrastructure in two downstream projects (2026-11-19) |
 | [planning/devkit-design.md](./planning/devkit-design.md) | Package shape, public API, migration stages and acceptance criteria |
+| [planning/oss-review-2026-11-20.md](./planning/oss-review-2026-11-20.md) | Independent review, findings and the execution backlog (2026-11-20) |
 
 ## Reference
 
