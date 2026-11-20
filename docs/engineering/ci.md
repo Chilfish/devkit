@@ -7,6 +7,8 @@ The pipeline is defined in `.github/workflows/ci.yml`.
 | Job | Trigger | Contents |
 |---|---|---|
 | `check` | push to main / PR | typecheck, lint, coverage, build, artifact and docs verification, example run; uploads `dist` and `coverage` artifacts |
+| `integration` | push to main / PR | Postgres 16 service; runs `tests/integration` with the real `@neondatabase/serverless` client and the background proxy |
+| `windows` | push to main / PR | typecheck, lint, test, build and package verification on `windows-latest` (the platform-specific spawn and shim paths) |
 | `runtime` | push to main / PR | depends on `check`; downloads `dist` and imports the ESM and CJS builds on Node 22 and 24 |
 
 ## Node versions
@@ -21,6 +23,9 @@ The toolchain (`tsdown`, TypeScript) requires Node ≥22, and `engines.node` is 
 - **Least privilege**: `permissions: contents: read`.
 - **Cancel stale runs**: `cancel-in-progress: true`.
 - **Lockfile**: `bun install --frozen-lockfile`; a stale `bun.lock` fails the job.
+- **Coverage thresholds**: enforced by `vitest.config.ts` (`statements` 63, `branches` 57, `functions` 62, `lines` 64). Raise them with new tests; never lower them to make a build pass.
+- **Integration**: `DEVKIT_PG_SMOKE=1` and `DEVKIT_PG_ADMIN_URL` are set only in the `integration` job; the other jobs skip database tests.
+- **Windows**: the `windows` job covers the `.cmd` / `.exe` shim, quoted command line and detached process paths that Linux cannot execute.
 - **Version alignment**: `packageManager`, the CI `bun-version` and the README must agree.
 - **No skipped gates**: any failing step is red; no `continue-on-error`.
 

@@ -40,6 +40,7 @@ afterEach(() => {
 `bun run test:coverage` uses v8 with `text-summary`, `json-summary` and `lcov` in `coverage/`.
 
 - Thresholds are a ratchet: raise them, never lower them to pass CI.
+- Current thresholds live in `vitest.config.ts`: `statements` 63, `branches` 57, `functions` 62, `lines` 64.
 - New logic needs tests; bug fixes start with a failing test.
 
 ## Integration opt-in
@@ -54,6 +55,11 @@ DEVKIT_PG_SMOKE=1 DEVKIT_PG_ADMIN_URL=postgres://postgres@localhost:5432/postgre
 They create a uniquely named database, apply `tests/fixtures/migrations`, exercise the proxy handler in-process, and drop the database afterwards. The proxy lifecycle test also spawns the real background entry, checks `/health`, verifies reuse, and verifies the conflict error for another database.
 
 The proxy handler is tested in-process; `startProxy` requires Bun.
+
+CI runs the integration suite in the `integration` job against a `postgres:16`
+service, including a test that drives the official
+`@neondatabase/serverless` client against the background proxy entry. The
+`windows` job runs the unit, contract and e2e layers on Windows.
 
 ## Forbidden
 

@@ -13,6 +13,13 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts'],
       reportsDirectory: './coverage',
+      // Ratchet: raise these, never lower them to make CI pass.
+      thresholds: {
+        statements: 63,
+        branches: 57,
+        functions: 62,
+        lines: 64,
+      },
     },
   },
 })
