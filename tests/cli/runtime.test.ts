@@ -92,6 +92,50 @@ describe('buildCli', () => {
     expect(program.name()).toBe('devkit-test')
     expect(program.description()).toBe('devkit test project')
   })
+
+  it('registers describe as a normal command', () => {
+    const program = buildCli({ config, version: '1.2.3', groups })
+    expect(program.commands.map(command => command.name())).toContain('describe')
+  })
+})
+
+describe('describe command', () => {
+  it('prints the tree as pretty JSON in human mode', async () => {
+    const program = buildCli({ config, version: '1.2.3', groups })
+    const io = capture()
+    try {
+      await runCli(program, ['describe'])
+    }
+    finally {
+      io.restore()
+    }
+
+    expect(process.exitCode).toBe(0)
+    const described = JSON.parse(io.out.join('')) as { name: string }
+    expect(described.name).toBe('devkit-test')
+    expect(io.out.join('')).toContain('\n  "version"')
+  })
+
+  it('returns a single envelope with --json', async () => {
+    const program = buildCli({ config, version: '1.2.3', groups })
+    const io = capture()
+    try {
+      await runCli(program, ['describe', '--json'])
+    }
+    finally {
+      io.restore()
+    }
+
+    expect(process.exitCode).toBe(0)
+    const lines = io.out.join('').trim().split('\n')
+    expect(lines).toHaveLength(1)
+    expect(JSON.parse(lines[0] as string)).toMatchObject({
+      ok: true,
+      command: 'describe',
+      data: { name: 'devkit-test', version: '1.2.3' },
+      meta: { version: '1.2.3' },
+    })
+  })
 })
 
 describe('runCli', () => {

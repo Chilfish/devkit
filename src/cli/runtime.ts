@@ -555,13 +555,19 @@ export function buildCli(options: BuildCliOptions): Command {
   applySharedSettings(program)
   program.enablePositionalOptions()
 
-  const describeCommand = program
-    .command('describe')
-    .description('print the full command tree as JSON so agents can bootstrap without reading source')
-  applySharedSettings(describeCommand)
-  describeCommand.action(() => {
-    process.stdout.write(`${JSON.stringify(describeCli(options), null, 2)}\n`)
-  })
+  // Registered as a normal command so `describe --json` uses the same envelope,
+  // logging and exit-code path as every other command.
+  registerCommand(program, {
+    id: 'describe',
+    description: 'print the full command tree as JSON so agents can bootstrap without reading source',
+    async run(ctx) {
+      const described = describeCli(options)
+      if (ctx.json)
+        return { data: described }
+      ctx.log.output(JSON.stringify(described, null, 2))
+      return {}
+    },
+  }, config, version)
 
   for (const group of groups) {
     const groupCommand = program.command(group.name).description(group.description)

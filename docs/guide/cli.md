@@ -96,7 +96,7 @@ Every `--json` run writes exactly one line to stdout:
 bun run ymmt describe
 ```
 
-Prints the configured name, version, exit codes, global options and the full command tree as JSON.
+Prints the configured name, version, exit codes, global options and the full command tree as pretty JSON. `describe` is a normal command: `describe --json` returns the same tree in `data` inside the one-line envelope, with `meta` and exit codes like every other command.
 
 ## Error shape
 
