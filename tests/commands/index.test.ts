@@ -38,6 +38,7 @@ describe('createDevCommands', () => {
       'dev.db',
       'dev.proxy',
       'dev.storage',
+      'dev.status',
     ])
   })
 
@@ -97,6 +98,38 @@ describe('createDevCommands', () => {
     const storage = group.commands.find(command => command.id === 'dev.storage')
 
     await expect(storage!.run(context())).rejects.toMatchObject({ exitCode: 3 })
+  })
+
+  it('rejects dev server without configured servers', async () => {
+    const empty = createDevCommands(createConfig({
+      dev: { servers: [] },
+    }))
+      .commands
+      .find(command => command.id === 'dev.server')
+
+    await expect(empty!.run(context())).rejects.toMatchObject({
+      code: 'NO_DEV_SERVERS',
+      exitCode: 3,
+    })
+  })
+
+  it('reports remote mode as down without probing local services', async () => {
+    delete process.env.LOCAL
+    const status = group.commands.find(command => command.id === 'dev.status')
+
+    const result = await status!.run({
+      ...context(),
+      dryRun: false,
+    })
+    expect(result).toMatchObject({
+      data: {
+        mode: 'remote',
+        database: { running: false },
+        proxy: { running: false },
+        storage: { running: false },
+      },
+    })
+    expect(result?.summary).toContain('mode remote')
   })
 
   it('switches the local flag when --local is used', async () => {

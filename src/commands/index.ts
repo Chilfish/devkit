@@ -1,8 +1,10 @@
+import type { StdioOptions } from 'node:child_process'
 import type { CommandGroup, CommandSpec } from '../cli'
 import type { DevkitConfig } from '../index'
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { homedir } from 'node:os'
+import { basename, dirname, join, resolve } from 'node:path'
 import { Option } from 'commander'
 import { CliError, ConfigError } from '../cli'
 import { loadEnvFile } from '../env/index'
@@ -14,8 +16,39 @@ import {
   ensurePostgresRunning,
   resolveBunBinary,
 } from '../local'
-import { isLocalMode, isLocalUrl } from '../shared/index'
+import { buildWindowsCommandLine, isPortOpen } from '../local/util'
+import { isLocalMode, isLocalUrl, localEndpoint, parseDatabaseInfo } from '../shared/index'
 import { ensureSiloRunning } from '../storage'
+
+/**
+ * Nearest package that owns `node_modules`; falls back to the nearest
+ * `package.json`, then to the starting directory.
+ *
+ * The walk stops at the user's home directory, so a stray `~/package.json`
+ * or `~/node_modules` can never capture resolution for a project below it.
+ */
+export function findProjectRoot(start: string = process.cwd()): string {
+  const origin = resolve(start)
+  const home = resolve(homedir())
+  let dir = origin
+  let packageRoot: string | undefined
+
+  for (;;) {
+    if (dir !== home || dir === origin) {
+      if (existsSync(join(dir, 'package.json'))) {
+        if (existsSync(join(dir, 'node_modules')))
+          return dir
+        packageRoot ??= dir
+      }
+    }
+    const parent = dirname(dir)
+    if (parent === dir || dir === home)
+      break
+    dir = parent
+  }
+
+  return packageRoot ?? origin
+}
 
 /** Resolve a command from `node_modules/.bin` first, then fall back to `PATH`. */
 export function resolveCommand(command: string, cwd = process.cwd()): string {
@@ -82,7 +115,7 @@ export interface ServerSpawn {
 export function resolveServerSpawn(
   server: { runtime: 'node' | 'bun', command: string, args?: readonly string[] },
   extraArgs: string[] = [],
-  cwd = process.cwd(),
+  cwd = findProjectRoot(),
 ): ServerSpawn {
   const args = [
     ...(server.args ?? []),
@@ -114,8 +147,18 @@ export function resolveServerSpawn(
   }
 
   const resolved = resolveCommand(server.command, cwd)
-  if (/\.(?:cmd|bat)$/i.test(resolved))
-    return { executable: resolved, args, shell: process.platform === 'win32' }
+  if (/\.(?:cmd|bat)$/i.test(resolved)) {
+    return {
+      executable: process.env.ComSpec ?? 'cmd.exe',
+      args: [
+        '/d',
+        '/s',
+        '/c',
+        buildWindowsCommandLine(resolved, args),
+      ],
+      shell: false,
+    }
+  }
   if (/\.exe$/i.test(resolved))
     return { executable: resolved, args, shell: false }
   return {
@@ -131,7 +174,7 @@ function runtimeBinary(runtime: 'node' | 'bun'): string {
     : (process.env.NODE ?? 'node')
 }
 
-export type DevCommandKey = 'server' | 'db' | 'proxy' | 'storage'
+export type DevCommandKey = 'server' | 'db' | 'proxy' | 'storage' | 'status'
 
 /** Optional text overrides so hosts can keep an existing describe/help contract. */
 export interface DevCommandStringOverride {
@@ -287,6 +330,97 @@ function devProxySpec(config: DevkitConfig, override?: DevCommandStringOverride)
   }
 }
 
+function devStatusSpec(config: DevkitConfig): CommandSpec {
+  const hint = config.identity.helpHint
+  const flag = config.env.localFlag
+  return {
+    id: 'dev.status',
+    description: 'report the local stack state without starting or stopping anything',
+    details: 'Read-only: checks Postgres reachability, the `/sql` proxy health and SILO health. '
+      + 'Reports `running: false` instead of failing when a service is down. '
+      + 'devkit does not own the system Postgres instance, so there is no `dev stop`; '
+      + `stop services with pg_ctl or taskkill (see docs/guide/local-dev.md).`,
+    examples: [`${hint} dev status`, `${hint} dev status --json`],
+    async run(_ctx) {
+      const databaseUrl = process.env.DATABASE_URL || config.database.localUrl
+      const endpoint = process.env.NEON_HTTP_ENDPOINT || config.database.proxyEndpoint
+      const storageEndpoint = localEndpoint(process.env)
+
+      const local = isLocalMode(process.env, flag)
+      const [databaseUp, proxy, storageUp] = local
+        ? await Promise.all([
+            isPortOpen(new URL(databaseUrl).hostname, Number(new URL(databaseUrl).port || 5432)),
+            readProxyHealth(endpoint),
+            readStorageHealth(storageEndpoint),
+          ])
+        : [false, undefined, false]
+
+      const data = {
+        mode: local
+          ? 'local'
+          : 'remote',
+        database: {
+          url: databaseUrl,
+          running: databaseUp,
+        },
+        proxy: {
+          endpoint,
+          running: proxy !== undefined,
+          ...(proxy ?? {}),
+        },
+        storage: {
+          endpoint: storageEndpoint,
+          running: storageUp,
+        },
+      }
+
+      const summary = [
+        `mode ${data.mode}`,
+        `database ${databaseUp
+          ? 'running'
+          : 'down'} (${parseDatabaseInfo(databaseUrl)?.host ?? databaseUrl})`,
+        `proxy ${proxy
+          ? `running (pid ${proxy.pid ?? '?'})`
+          : 'down'} (${endpoint})`,
+        `storage ${storageUp
+          ? 'running'
+          : 'down'} (${storageEndpoint})`,
+      ].join(' · ')
+
+      return { data, summary }
+    },
+  }
+}
+
+async function readProxyHealth(endpoint: string): Promise<{ pid?: number, host?: string, database?: string } | undefined> {
+  try {
+    const response = await fetch(new URL('/health', endpoint), {
+      signal: AbortSignal.timeout(1500),
+    })
+    if (!response.ok)
+      return undefined
+    const body = await response.json() as { ok?: boolean, pid?: number, host?: string, database?: string }
+    return body.ok
+      ? body
+      : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
+async function readStorageHealth(endpoint: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${endpoint}/minio/health/live`, {
+      signal: AbortSignal.timeout(1500),
+    })
+    return response.ok
+  }
+  catch {
+    return false
+  }
+}
+
 function devStorageSpec(config: DevkitConfig): CommandSpec {
   const hint = config.identity.helpHint
   const flag = config.env.localFlag
@@ -373,6 +507,12 @@ function devServerSpec(
     ],
     async run(ctx) {
       const servers = config.dev.servers
+      if (servers.length === 0) {
+        throw new ConfigError('No dev servers are configured', {
+          code: 'NO_DEV_SERVERS',
+          hint: 'Add dev.servers to defineDevkit(), or use dev db / dev proxy / dev storage directly',
+        })
+      }
       const forwarded = ctx.args.slice()
 
       if (ctx.flag('local')) {
@@ -405,8 +545,12 @@ function devServerSpec(
           ? forwarded
           : [])
         ctx.log.child(server.name).info(`starting ${plan.executable} ${plan.args.join(' ')}`.trimEnd())
+        // In JSON mode stdout belongs to the envelope; child stdout goes to stderr.
+        const stdio: StdioOptions = ctx.json
+          ? ['inherit', 2, 2]
+          : 'inherit'
         const child = spawn(plan.executable, plan.args, {
-          stdio: 'inherit',
+          stdio,
           env: process.env,
           shell: plan.shell,
         })
@@ -461,6 +605,7 @@ export function createDevCommands(config: DevkitConfig, options: DevCommandsOpti
       applyStrings(devDbSpec(config, strings?.commands?.db), strings?.commands?.db),
       applyStrings(devProxySpec(config, strings?.commands?.proxy), strings?.commands?.proxy),
       applyStrings(devStorageSpec(config), strings?.commands?.storage),
+      applyStrings(devStatusSpec(config), strings?.commands?.status),
     ],
   }
 }

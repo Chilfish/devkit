@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { resolvePackageBin, resolveServerSpawn } from '../../src/commands/index'
+import { findProjectRoot, resolvePackageBin, resolveServerSpawn } from '../../src/commands/index'
 import { resolveBunBinary } from '../../src/local/index'
 
 let dirs: string[] = []
@@ -57,6 +57,80 @@ describe('resolvePackageBin', () => {
 
     expect(resolvePackageBin('missing', cwd)).toBeUndefined()
     expect(resolvePackageBin('no-bin', cwd)).toBeUndefined()
+  })
+})
+
+describe('findProjectRoot', () => {
+  it('walks up to the directory that owns node_modules', () => {
+    const root = tempDir()
+    touch(join(root, 'package.json'), '{}')
+    mkdirSync(join(root, 'node_modules'), { recursive: true })
+    const nested = join(root, 'apps', 'web', 'src')
+    mkdirSync(nested, { recursive: true })
+    touch(join(root, 'apps', 'web', 'package.json'), '{}')
+
+    expect(findProjectRoot(nested)).toBe(root)
+  })
+
+  it('falls back to the nearest package.json', () => {
+    const root = tempDir()
+    touch(join(root, 'package.json'), '{}')
+    const nested = join(root, 'scripts')
+    mkdirSync(nested, { recursive: true })
+
+    expect(findProjectRoot(nested)).toBe(root)
+  })
+
+  it('prefers the package root that owns node_modules over a nested package.json', () => {
+    const root = tempDir()
+    touch(join(root, 'package.json'), '{}')
+    mkdirSync(join(root, 'node_modules'), { recursive: true })
+    const nested = join(root, 'apps', 'web')
+    mkdirSync(nested, { recursive: true })
+    touch(join(nested, 'package.json'), '{}')
+
+    expect(findProjectRoot(nested)).toBe(root)
+  })
+
+  it('ignores a stray node_modules above the project', () => {
+    const root = tempDir()
+    const project = join(root, 'project')
+    mkdirSync(project, { recursive: true })
+    touch(join(project, 'package.json'), '{}')
+    mkdirSync(join(root, 'node_modules'), { recursive: true })
+
+    expect(findProjectRoot(project)).toBe(project)
+  })
+
+  it('returns the starting directory when nothing is found', () => {
+    const root = tempDir()
+    const nested = join(root, 'lonely')
+    mkdirSync(nested, { recursive: true })
+
+    expect(findProjectRoot(nested)).toBe(nested)
+  })
+
+  it('resolves a server from a nested working directory', () => {
+    const root = tempDir()
+    touch(join(root, 'package.json'), '{}')
+    mkdirSync(join(root, 'node_modules'), { recursive: true })
+    const dir = writePackage(root, 'astro', {
+      bin: { astro: 'bin/astro.mjs' },
+    })
+    const entry = join(dir, 'bin', 'astro.mjs')
+    touch(entry)
+    const nested = join(root, 'apps', 'web')
+    mkdirSync(nested, { recursive: true })
+
+    const previous = process.cwd()
+    process.chdir(nested)
+    try {
+      const plan = resolveServerSpawn({ runtime: 'node', command: 'astro' })
+      expect(plan.args[0]).toBe(entry)
+    }
+    finally {
+      process.chdir(previous)
+    }
   })
 })
 
@@ -137,5 +211,19 @@ describe('resolveServerSpawn', () => {
     expect(plan.executable).toBe(shim)
     expect(plan.args).toEqual(['dev'])
     expect(plan.shell).toBe(false)
+  })
+
+  it.skipIf(process.platform !== 'win32')('runs a .cmd shim through cmd.exe with quoted arguments', () => {
+    const cwd = tempDir()
+    const shim = join(cwd, 'node_modules', '.bin', 'tool.cmd')
+    touch(shim, '@echo off')
+
+    const plan = resolveServerSpawn({ runtime: 'node', command: 'tool' }, ['dev', '--flag=a b'], cwd)
+
+    expect(plan.executable).toMatch(/cmd\.exe$/i)
+    expect(plan.shell).toBe(false)
+    expect(plan.args.slice(0, 3)).toEqual(['/d', '/s', '/c'])
+    expect(plan.args[3]).toContain('--flag=a b')
+    expect(plan.args[3]?.startsWith('"')).toBe(true)
   })
 })

@@ -9,7 +9,7 @@ One source, many consumers. Project differences are injected through a single `d
 - **Single implementation** — CLI runtime, env layering, local services and storage are consumed as a dependency instead of being copied.
 - **Configuration only** — names, file paths, database URLs, buckets and dev servers come from `defineDevkit`.
 - **Machine contract** — `--json` emits a one-line envelope, exit codes are fixed, logs go to stderr, and `describe` prints the whole command tree.
-- **Local stack** — one command starts Postgres, creates the database, applies migrations, starts the `/sql` proxy and SILO, then reuses them on the next run.
+- **Local stack** — one command starts Postgres, creates the database, applies migrations, starts the `/sql` proxy and SILO, then reuses them on the next run. `dev status` reports the current state without changing anything.
 - **Runtime boundaries** — only `.` and `./shared` are platform-neutral; Node and Bun capabilities live in subpath entries.
 - **No silent divergence** — the entry matrix and package contract are locked by tests.
 
@@ -79,7 +79,8 @@ await runCli(buildCli({ config: devkit, version, groups }), process.argv.slice(2
 | `dev db` | Start Postgres, create the database, run migrations, sync the env file |
 | `dev proxy` | Run the Neon-compatible proxy in the foreground |
 | `dev storage` | Start SILO and prepare the bucket |
-| `describe` | Print the command tree as JSON |
+| `dev status` | Report Postgres, proxy and SILO state without changing anything |
+| `describe` | Print the command tree as JSON (`--json` wraps it in the envelope) |
 
 Every command accepts `--json`, `--quiet`, `--dry-run`, `--log-level` and `--log-file`.
 
