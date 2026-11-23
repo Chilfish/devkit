@@ -8,7 +8,7 @@ export const devkit = defineDevkit({
     helpHint: 'bun examples/cli.ts',
     jsonEnvVar: 'DEVKIT_EXAMPLE_JSON',
   },
-  env: { file: '.dev.vars' },
+  env: { file: '.env' },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/devkit_example',
     proxyEndpoint: 'http://127.0.0.1:4444/sql',

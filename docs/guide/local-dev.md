@@ -48,12 +48,13 @@ The banner prints mode, database host/name and storage address only. It never pr
 Each environment keeps its own file instead of suffixed keys:
 
 ```text
-.env          # shared defaults, committed
-.env.dev      # local database, storage and tokens, ignored
+.env.example  # committed template with the local defaults
+.env          # your local copy, ignored
+.env.dev      # optional local overrides, ignored
 .env.prod     # deployment values, injected by the platform or ignored
 ```
 
-Deployment needs no key rewriting: it sets `LOCAL=0` (or leaves it unset), and `<file>.prod` supplies the remote values under the same key names. Anything the platform injects into the process environment wins over both files.
+Deployment needs no key rewriting: it sets `LOCAL=0` (or leaves it unset), and `<file>.prod` supplies the remote values under the same key names. Anything the platform injects into the process environment wins over both files. `devkit` ships `.env.example` with the local defaults, so `cp .env.example .env` is enough to start the local stack.
 
 ## Postgres discovery
 

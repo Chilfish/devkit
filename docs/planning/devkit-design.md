@@ -297,7 +297,7 @@ The downstream must remain runnable at every stage; two implementations must not
 **Acceptance**
 
 - `bun run check` passes; `bun run test:coverage` covers config, env precedence, env-file writes, exit codes and the entry matrix.
-- `bun pm pack --dry-run` contains only `dist/`, `README.md`, `LICENSE.md`, `package.json`.
+- `bun pm pack --dry-run` contains only `dist/`, `README.md`, `LICENSE.md`, `.env.example`, `package.json`.
 - A temporary fixture installing the tarball supports `--help`, `describe --json` and `dev --help`; the proxy answers `select 1`; `/health` returns the target database.
 
 ### S2 Switch ymmt

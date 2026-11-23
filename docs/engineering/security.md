@@ -13,7 +13,7 @@
 |---|---|---|
 | npm publish credential | GitHub OIDC | No static secret |
 | `GITHUB_TOKEN` | Injected by Actions | Least privilege |
-| Local development secrets | `.dev.vars` (ignored) | Never in the repository |
+| Local development secrets | `.env`, `.env.dev`, `.env.prod` (ignored) | Never in the repository; commit `.env.example` only |
 
 - Never `echo` secrets in workflows; use `printf` when writing files.
 - New secrets must be documented here and in [build-and-release](./build-and-release.md).

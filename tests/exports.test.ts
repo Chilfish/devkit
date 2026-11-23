@@ -46,8 +46,13 @@ describe('package manifest', () => {
     expect(manifest.sideEffects).toBe(false)
   })
 
-  it('publishes only the build output and docs', () => {
-    expect(manifest.files).toEqual(['LICENSE.md', 'README.md', 'dist'])
+  it('publishes only the build output, docs and the env template', () => {
+    expect(manifest.files).toEqual([
+      '.env.example',
+      'LICENSE.md',
+      'README.md',
+      'dist',
+    ])
   })
 
   it('declares the supported node range', () => {

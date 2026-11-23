@@ -92,6 +92,7 @@ else {
     'package.json',
     'README.md',
     'LICENSE.md',
+    '.env.example',
     'dist/index.js',
     'dist/index.cjs',
     'dist/index.d.ts',

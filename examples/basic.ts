@@ -5,7 +5,7 @@ const devkit = defineDevkit({
     name: 'devkit',
     description: 'Demo project',
   },
-  env: { file: '.dev.vars' },
+  env: { file: '.env' },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/devkit_dev',
     proxyEndpoint: 'http://127.0.0.1:4444/sql',

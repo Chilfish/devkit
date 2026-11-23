@@ -10,7 +10,7 @@
 | `type` | `module` | Source and ESM output are parsed as ESM |
 | `packageManager` | `bun@1.4.4` | Must match the CI Bun version |
 | `sideEffects` | `false` | Keeps the package tree-shakeable |
-| `files` | `LICENSE.md` / `README.md` / `dist` | No source, tests, scripts or docs |
+| `files` | `.env.example` / `LICENSE.md` / `README.md` / `dist` | Only the template, docs and build output; no source, tests, scripts or docs |
 | `engines.node` | `>=22.22` | Matches the CI runtime floor |
 | `publishConfig` | `access: public`, `provenance: true` | OIDC publish with provenance |
 

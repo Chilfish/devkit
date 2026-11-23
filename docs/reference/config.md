@@ -73,9 +73,12 @@ The config is static. Runtime environment state lives in the env files and in `p
 `loadEnvFile` reads `env.file`, then `<file>.dev` when the local flag is on or `<file>.prod` when it is off. A missing mode file is skipped. Values from the mode file override the base file, and variables already in the process environment always win.
 
 ```text
-.env            # shared defaults, committed
-.env.dev        # local overrides, ignored
+.env.example    # committed template with the local defaults
+.env            # local copy, ignored
+.env.dev        # optional local overrides, ignored
 .env.prod       # deployment values, injected by the platform or ignored
 ```
+
+Start from the template: `cp .env.example .env`.
 
 The same key appears in every file with an environment-specific value. There are no suffixed keys to rename when shipping to production: the deployment sets the local flag to `0` (or leaves it unset), and `<file>.prod` supplies the remote values.

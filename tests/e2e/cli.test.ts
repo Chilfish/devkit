@@ -1,12 +1,27 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 
 /**
  * End-to-end CLI contract against the example wiring:
  * help/output/exit codes and the JSON envelope.
  */
 const root = fileURLToPath(new URL('../..', import.meta.url))
+const cli = join(root, 'examples', 'cli.ts')
+
+/**
+ * Run from an empty directory, not the repository root: `loadEnvFile` resolves
+ * the env file from `cwd`, so a developer's local `.env` must not decide the
+ * exit codes these tests assert.
+ */
+const cwd = mkdtempSync(join(tmpdir(), 'devkit-e2e-'))
+
+afterAll(() => {
+  rmSync(cwd, { recursive: true, force: true })
+})
 
 function hasBun(): boolean {
   try {
@@ -29,8 +44,8 @@ function run(args: string[], env: NodeJS.ProcessEnv = {}): { status: number | nu
     'DEVKIT_EXAMPLE_JSON',
   ])
     delete cleanEnv[key]
-  const result = spawnSync('bun', ['examples/cli.ts', ...args], {
-    cwd: root,
+  const result = spawnSync('bun', [cli, ...args], {
+    cwd,
     encoding: 'utf8',
     env: {
       ...cleanEnv,
@@ -95,5 +110,21 @@ describe.skipIf(!bunAvailable)('example CLI', () => {
     const result = run(['dev', 'db', '--dry-run'], { DEVKIT_EXAMPLE_JSON: '1' })
     expect(result.status).toBe(0)
     expect(JSON.parse(result.stdout)).toMatchObject({ ok: true, command: 'dev.db' })
+  })
+
+  it('starts a working local setup from the committed template', () => {
+    copyFileSync(join(root, '.env.example'), join(cwd, '.env'))
+    try {
+      const result = run(['dev', 'proxy', '--dry-run', '--json'])
+      expect(result.status).toBe(0)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: true,
+        command: 'dev.proxy',
+        data: { databaseUrl: 'postgres://postgres@localhost:5432/devkit_dev' },
+      })
+    }
+    finally {
+      rmSync(join(cwd, '.env'), { force: true })
+    }
   })
 })

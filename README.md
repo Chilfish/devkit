@@ -32,6 +32,12 @@ bun add -d @chilfish/devkit
 
 ## Configure
 
+Copy the committed template and adjust it for your machine:
+
+```bash
+cp .env.example .env
+```
+
 ```ts
 // dev.config.ts
 import { defineDevkit } from '@chilfish/devkit'

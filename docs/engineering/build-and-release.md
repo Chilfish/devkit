@@ -34,7 +34,7 @@ CI checks the entry artifacts after building; `bun run verify:package` validates
 ## package.json contract
 
 - Each entry is a condition object with `types` before `default`.
-- `files` contains only `dist`, `LICENSE.md` and `README.md`.
+- `files` contains only `dist`, `LICENSE.md`, `README.md` and `.env.example`.
 - `sideEffects: false`.
 - `engines.node` matches the CI floor.
 - `publishConfig.provenance: true`.

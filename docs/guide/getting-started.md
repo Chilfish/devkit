@@ -29,7 +29,7 @@ import { defineDevkit } from '@chilfish/devkit'
 
 export const devkit = defineDevkit({
   identity: { name: 'ymmt', description: 'Data pipeline', helpHint: 'bun run ymmt' },
-  env: { file: '.dev.vars' },
+  env: { file: '.env' },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/ymmt_dev',
     proxyEndpoint: 'http://127.0.0.1:4444/sql',
@@ -86,9 +86,16 @@ Configuration uses the familiar `.env` layout instead of suffixed keys. `env.fil
 - With the local flag off, a `DATABASE_URL` that still points at localhost is cleared with a warning, so a local address never reaches the remote target.
 
 ```text
-.env          # shared defaults, committed
-.env.dev      # local database, storage and tokens, ignored
+.env.example  # committed template with the local defaults
+.env          # your local copy, ignored
+.env.dev      # optional local overrides, ignored
 .env.prod     # deployment values, injected by the platform or ignored
+```
+
+Copy the template once, then adjust the values for your machine:
+
+```bash
+cp .env.example .env
 ```
 
 The same key appears in each file; there is nothing to rename when shipping. Set `env.file` only when the project keeps a different filename, for example `.dev.vars` (then the mode files are `.dev.vars.dev` / `.dev.vars.prod`).
