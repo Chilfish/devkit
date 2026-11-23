@@ -22,8 +22,6 @@ export interface EnsureDevServicesOptions {
   databaseUrl?: string
   /** Override the proxy endpoint. */
   endpoint?: string
-  /** Keep a previous non-local `DATABASE_URL` as `DATABASE_URL<suffix>`. */
-  preserveRemote?: boolean
 }
 
 export interface DevServicesResult {
@@ -76,7 +74,6 @@ export async function ensureDevServices(options: EnsureDevServicesOptions): Prom
     endpoint,
     cwd: options.cwd,
     log,
-    preserveRemote: options.preserveRemote,
   })
 
   const parsed = new URL(databaseUrl)

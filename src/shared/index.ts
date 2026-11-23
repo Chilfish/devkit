@@ -86,7 +86,7 @@ export function parseEnvContent(content: string): Record<string, string> {
 
 /**
  * Overwrite existing keys, keep all other lines (comments, blank lines,
- * `*_ONLINE`) and append missing ones.
+ * unrelated keys) and append missing ones.
  *
  * Used to point an env file at local services without destroying other settings.
  * The original line ending (LF or CRLF) is preserved.

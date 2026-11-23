@@ -18,12 +18,15 @@ export interface DevkitIdentityConfig {
 }
 
 export interface DevkitEnvConfig {
-  /** Environment file, relative to the repository root. */
-  file: string
+  /**
+   * Base environment file, relative to the repository root. Defaults to `.env`.
+   *
+   * `<file>.dev` and `<file>.prod` are layered on top and selected by the local
+   * flag, so each environment keeps its own file instead of suffixed keys.
+   */
+  file?: string
   /** Master switch variable name. Defaults to `LOCAL`. */
   localFlag?: string
-  /** Remote-target suffix. Defaults to `_ONLINE`; empty string disables expansion. */
-  onlineSuffix?: string
 }
 
 export interface DevkitDatabaseConfig {
@@ -86,7 +89,6 @@ export interface DevkitConfig {
   readonly env: {
     readonly file: string
     readonly localFlag: string
-    readonly onlineSuffix: string
   }
   readonly database: {
     readonly localUrl: string
@@ -164,11 +166,8 @@ export function defineDevkit(input: DevkitConfigInput): DevkitConfig {
   const helpHint = optionalString(input.identity?.helpHint, 'identity.helpHint') ?? `bun run ${name}`
   const jsonEnvVar = optionalString(input.identity?.jsonEnvVar, 'identity.jsonEnvVar')
 
-  const file = requireString(input.env?.file, 'env.file')
+  const file = optionalString(input.env?.file, 'env.file') ?? '.env'
   const localFlag = optionalString(input.env?.localFlag, 'env.localFlag') ?? 'LOCAL'
-  const onlineSuffix = input.env?.onlineSuffix ?? '_ONLINE'
-  if (typeof onlineSuffix !== 'string')
-    throw new DevkitConfigError('env.onlineSuffix', 'must be a string')
 
   const localUrl = requireLocalUrl(input.database?.localUrl, 'database.localUrl')
   const proxyEndpoint = requireLocalUrl(input.database?.proxyEndpoint, 'database.proxyEndpoint')
@@ -210,7 +209,7 @@ export function defineDevkit(input: DevkitConfigInput): DevkitConfig {
         ? { jsonEnvVar }
         : {}),
     },
-    env: { file, localFlag, onlineSuffix },
+    env: { file, localFlag },
     database: { localUrl, proxyEndpoint, migrations },
     storage: {
       ...(bucket

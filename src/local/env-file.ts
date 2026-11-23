@@ -5,11 +5,9 @@ import { resolve } from 'node:path'
 import { createLogger } from '../cli/logger'
 import {
   isLocalMode,
-  isLocalUrl,
   localBucket,
   localEndpoint,
   localPublicBase,
-  parseEnvContent,
   upsertEnvValues,
 } from '../shared/index'
 
@@ -21,33 +19,37 @@ export interface EnsureEnvFileOptions {
   cwd?: string
   log?: LogLike
   dryRun?: boolean
-  /**
-   * In local mode, keep a pre-existing non-local `DATABASE_URL` as
-   * `DATABASE_URL<suffix>` before overwriting it.
-   */
-  preserveRemote?: boolean
 }
 
 /**
- * Point the environment file at local services.
+ * Write the local service addresses into the local mode file.
  *
- * In local mode declared keys are overwritten while comments, blank lines and
- * `*_ONLINE` targets are preserved. In remote mode only missing keys are added,
- * so existing values are never clobbered.
+ * The target is `<file>.dev` when it exists, otherwise the base `<file>`; the
+ * declared keys are overwritten while comments and other lines are preserved.
+ * Remote mode writes nothing: `<file>.prod` holds the deployment's own values
+ * and must not receive localhost addresses.
  */
 export function ensureEnvFile(options: EnsureEnvFileOptions): void {
   const { config } = options
   const log = options.log ?? createLogger({ name: 'dev.db' })
-  const path = resolve(options.cwd ?? process.cwd(), config.env.file)
+  const cwd = options.cwd ?? process.cwd()
+
+  if (!isLocalMode(process.env, config.env.localFlag)) {
+    log.info(`remote mode: ${resolve(cwd, `${config.env.file}.prod`)} left untouched; it keeps the deployment values`)
+    return
+  }
+
   const flag = config.env.localFlag
-  const local = isLocalMode(process.env, flag)
+  const modeFile = resolve(cwd, `${config.env.file}.dev`)
+  const path = existsSync(modeFile)
+    ? modeFile
+    : resolve(cwd, config.env.file)
 
   const values: Record<string, string> = {
     DATABASE_URL: options.databaseUrl,
     NEON_HTTP_ENDPOINT: options.endpoint,
+    [flag]: '1',
   }
-  if (local)
-    values[flag] = '1'
   if (config.storage.publicBaseEnv) {
     values[config.storage.publicBaseEnv] = localPublicBase(
       localEndpoint(process.env),
@@ -65,42 +67,14 @@ export function ensureEnvFile(options: EnsureEnvFileOptions): void {
       path,
       `# Local development variables; do not commit\n${Object.entries(values).map(([key, value]) => `${key}=${value}`).join('\n')}\n`,
     )
-    log.info(`wrote ${config.env.file}`)
+    log.info(`wrote ${path}`)
     return
   }
 
   const content = readFileSync(path, 'utf8')
-  if (local) {
-    if (options.preserveRemote && config.env.onlineSuffix) {
-      const parsed = parseEnvContent(content)
-      const remoteKey = `DATABASE_URL${config.env.onlineSuffix}`
-      const current = parsed.DATABASE_URL
-      if (current && !isLocalUrl(current) && parsed[remoteKey] === undefined) {
-        values[remoteKey] = current
-        log.info(`saved the previous DATABASE_URL as ${remoteKey}`)
-      }
-    }
-
-    const next = upsertEnvValues(content, values)
-    if (next !== content) {
-      writeFileSync(path, next)
-      log.info(`${config.env.file} switched to local: ${Object.keys(values).join(' / ')}`)
-    }
-    return
-  }
-
-  const parsed = parseEnvContent(content)
-  const missing = Object.entries(values).filter(([key]) => parsed[key] === undefined)
-  if (missing.length > 0) {
-    const prefix = content.endsWith('\n')
-      ? content
-      : `${content}\n`
-    writeFileSync(path, `${prefix}${missing.map(([key, value]) => `${key}=${value}`).join('\n')}\n`)
-    log.info(`${config.env.file} appended: ${missing.map(([key]) => key).join(' / ')}`)
-  }
-
-  const configured = parsed.DATABASE_URL
-  if (configured && !isLocalUrl(configured)) {
-    log.warn(`${config.env.file} DATABASE_URL is not local (${new URL(configured).host}); dev server will use the remote database`)
+  const next = upsertEnvValues(content, values)
+  if (next !== content) {
+    writeFileSync(path, next)
+    log.info(`${path} switched to local: ${Object.keys(values).join(' / ')}`)
   }
 }

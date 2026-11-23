@@ -16,6 +16,19 @@ export function readEnvFile(path: string): Record<string, string> {
   return parseEnvContent(readFileSync(path, 'utf8'))
 }
 
+/** Mode file suffix: the local flag selects `.dev`, everything else `.prod`. */
+function modeSuffix(local: boolean): 'dev' | 'prod' {
+  return local
+    ? 'dev'
+    : 'prod'
+}
+
+function readIfExists(path: string): Record<string, string> {
+  return existsSync(path)
+    ? readEnvFile(path)
+    : {}
+}
+
 /**
  * One-line description of where this run reads and writes: mode, database host
  * and name, storage address. Only addressing information, never credentials.
@@ -56,34 +69,31 @@ export interface LoadEnvOptions {
 }
 
 /**
- * Read the environment file and choose values according to the local flag.
+ * Read the environment files and fill `process.env`.
  *
- * - Plain keys in the file are the local developer's values;
- * - remote targets live in `<KEY>_ONLINE`: expanded when the local flag is off,
- *   ignored when it is on;
- * - the file only fills keys absent from the process environment, so explicit
- *   variables always win;
- * - the local flag itself resolves as process environment > file.
+ * Files are stacked, like `.env` loaders: `env.file` (default `.env`) first,
+ * then `<file>.dev` when the local flag is on or `<file>.prod` when it is off.
+ * A missing mode file is skipped, so a project can keep everything in the base
+ * file. Later files override earlier ones and process variables always win.
+ *
+ * The local flag itself resolves as process environment > base file.
  */
 export function loadEnvFile(options: LoadEnvOptions): void {
   const { config } = options
-  const suffix = config.env.onlineSuffix
   const flag = config.env.localFlag
-  const path = resolve(options.cwd ?? process.cwd(), config.env.file)
-  const values = existsSync(path)
-    ? readEnvFile(path)
-    : {}
-  const ambient = new Set(Object.keys(process.env))
+  const cwd = options.cwd ?? process.cwd()
+  const base = readIfExists(resolve(cwd, config.env.file))
+
   const local = process.env[flag] !== undefined
     ? isLocalMode(process.env, flag)
-    : isLocalMode(values, flag)
+    : isLocalMode(base, flag)
+  const modeFile = readIfExists(resolve(cwd, `${config.env.file}.${modeSuffix(local)}`))
 
-  for (const [key, value] of Object.entries(values)) {
-    if (suffix && key.endsWith(suffix))
-      continue
-    if (ambient.has(key))
-      continue
-    process.env[key] = value
+  const merged: Record<string, string> = {}
+  Object.assign(merged, base, modeFile)
+  for (const [key, value] of Object.entries(merged)) {
+    if (process.env[key] === undefined)
+      process.env[key] = value
   }
 
   if (local) {
@@ -92,10 +102,9 @@ export function loadEnvFile(options: LoadEnvOptions): void {
   }
   else {
     process.env[flag] = '0'
-    expandOnlineValues(values, suffix, ambient)
     if (isLocalUrl(process.env.DATABASE_URL)) {
       delete process.env.DATABASE_URL
-      warn(`remote mode but DATABASE_URL points at localhost: set DATABASE_URL${suffix} for the remote database, or ${flag}=1 for local development`)
+      warn(`remote mode but DATABASE_URL points at localhost: set the remote database in ${config.env.file}.prod, or ${flag}=1 for local development`)
     }
   }
 
@@ -114,24 +123,6 @@ function applyLocalDefaults(config: DevkitConfig): void {
       localEndpoint(process.env),
       localBucket(process.env, config.storage.bucket),
     )
-  }
-}
-
-/** Expand `<KEY><suffix>` into `<KEY>`; explicitly set process variables still win. */
-function expandOnlineValues(
-  values: Record<string, string>,
-  suffix: string,
-  ambient: Set<string>,
-): void {
-  if (!suffix)
-    return
-  for (const [key, value] of Object.entries(values)) {
-    if (!key.endsWith(suffix) || value === '')
-      continue
-    const base = key.slice(0, -suffix.length)
-    if (!base || ambient.has(base))
-      continue
-    process.env[base] = value
   }
 }
 
