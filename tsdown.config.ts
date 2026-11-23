@@ -39,6 +39,10 @@ export default defineConfig([
       'local/index': 'src/local/index.ts',
       'storage/index': 'src/storage/index.ts',
       'commands/index': 'src/commands/index.ts',
+      // Internal, resolved by absolute path next to `pipeline/index`: the public
+      // subpath is `./pipeline`, the worker entry is not importable by consumers.
+      'pipeline/worker-entry': 'src/pipeline/worker-entry.ts',
+      'pipeline/index': 'src/pipeline/index.ts',
     },
     format: ['esm', 'cjs'],
     dts: true,

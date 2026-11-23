@@ -33,6 +33,7 @@ const ENTRIES = [
   './proxy',
   './storage',
   './commands',
+  './pipeline',
 ] as const
 
 describe('package manifest', () => {

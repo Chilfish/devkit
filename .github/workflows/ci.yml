@@ -51,6 +51,8 @@ jobs:
           test -f dist/proxy/index.js
           test -f dist/storage/index.js
           test -f dist/commands/index.js
+          test -f dist/pipeline/index.js
+          test -f dist/pipeline/worker-entry.js
           test -f dist/bin/proxy.js
 
       - name: Upload coverage

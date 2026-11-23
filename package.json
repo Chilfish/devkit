@@ -102,6 +102,16 @@
         "default": "./dist/commands/index.cjs"
       }
     },
+    "./pipeline": {
+      "import": {
+        "types": "./dist/pipeline/index.d.ts",
+        "default": "./dist/pipeline/index.js"
+      },
+      "require": {
+        "types": "./dist/pipeline/index.d.cts",
+        "default": "./dist/pipeline/index.cjs"
+      }
+    },
     "./bin/proxy": "./dist/bin/proxy.js",
     "./package.json": "./package.json"
   },
@@ -136,6 +146,7 @@
     "example:env": "bun examples/env.ts",
     "example:local": "bun examples/local.ts",
     "example:proxy": "bun examples/proxy.ts",
+    "example:pipeline": "bun examples/pipeline.ts",
     "test:integration": "vitest run tests/integration",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:tag": "node scripts/verify-release-tag.mjs",
