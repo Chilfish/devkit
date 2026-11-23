@@ -7,6 +7,7 @@ This directory holds decisions and plans that are **not yet implemented**. Move 
 | [current-state.md](./current-state.md) | Final (2026-11-19) | Audit of duplicated infrastructure in the two downstream projects |
 | [devkit-design.md](./devkit-design.md) | Draft (2026-11-19) | Package shape, public API, migration stages and acceptance criteria |
 | [oss-review-2026-11-20.md](./oss-review-2026-11-20.md) | Implemented (2026-11-20) | Independent review, findings and the execution backlog |
+| [concurrency-framework.md](./concurrency-framework.md) | Implemented (2026-11-23) | `./pipeline`: bounded concurrency, stage state machine, resume |
 
 ## Conventions
 

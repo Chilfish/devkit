@@ -16,6 +16,7 @@ A reusable local-development package: one source for CLI runtime, env layering, 
 | `./proxy` | Neon `/sql` proxy | Bun runtime (node bundle) | no |
 | `./storage` | SILO lifecycle and bucket policy | node | no |
 | `./commands` | `createDevCommands` | node | no |
+| `./pipeline` | Bounded-concurrency stage runner, snapshots, worker pool | node | no |
 | `./bin/proxy` | Executable background proxy | Bun | no |
 
 `package.json#exports` and `tests/exports.test.ts` change together; adding or removing an entry is a public contract change.
@@ -30,11 +31,12 @@ src/env/             env file loading, local overrides, remote expansion
 src/local/           Postgres, database, migrations, env file, proxy lifecycle
 src/storage/         SILO lifecycle and bucket policy
 src/proxy/           HTTP protocol translation
+src/pipeline/        bounded concurrency, stage state machine, snapshots, workers
 src/commands/        built-in dev command group
 src/bin/proxy.ts     background entry
 ```
 
-Dependency direction: `commands → local → storage/util`, `cli → env → shared`, and everything may import `shared`. `shared` imports nothing.
+Dependency direction: `commands → local → storage/util`, `cli → env → shared`, and everything may import `shared`. `shared` imports nothing. `pipeline` is a standalone leaf that imports nothing from the other modules.
 
 ## Runtime boundaries
 
@@ -59,7 +61,7 @@ Dependency direction: `commands → local → storage/util`, `cli → env → sh
 `tsdown.config.ts` contains four build targets:
 
 1. neutral: `.` and `./shared`
-2. node: `./cli`, `./env`, `./local`, `./storage`, `./commands`
+2. node: `./cli`, `./env`, `./local`, `./storage`, `./commands`, `./pipeline` (plus the internal `pipeline/worker-entry` chunk)
 3. neutral/Bun runtime: `./proxy` (tsdown has no `bun` platform, so it builds with `node` and `pg` stays external; the code still calls `Bun.serve`)
 4. node/Bun runtime: `./bin/proxy` (ESM only, shebang preserved)
 

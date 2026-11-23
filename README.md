@@ -10,6 +10,7 @@ One source, many consumers. Project differences are injected through a single `d
 - **Configuration only** — names, file paths, database URLs, buckets and dev servers come from `defineDevkit`.
 - **Machine contract** — `--json` emits a one-line envelope, exit codes are fixed, logs go to stderr, and `describe` prints the whole command tree.
 - **Local stack** — one command starts Postgres, creates the database, applies migrations, starts the `/sql` proxy and SILO, then reuses them on the next run. `dev status` reports the current state without changing anything.
+- **Concurrent batch work** — a stage runner with bounded concurrency, worker threads for CPU-bound items, a strict state machine and resumable snapshots.
 - **Runtime boundaries** — only `.` and `./shared` are platform-neutral; Node and Bun capabilities live in subpath entries.
 - **No silent divergence** — the entry matrix and package contract are locked by tests.
 
@@ -104,6 +105,7 @@ Every command accepts `--json`, `--quiet`, `--dry-run`, `--log-level` and `--log
 - [Getting started](./docs/guide/getting-started.md) — install, configure, wire up
 - [Local development](./docs/guide/local-dev.md) — Postgres, proxy, SILO
 - [CLI contract](./docs/guide/cli.md) — `CommandSpec`, `--json`, exit codes
+- [Pipeline](./docs/guide/pipeline.md) — bounded concurrency, stages, resume
 - [Architecture](./docs/engineering/architecture.md) — layers and entry matrix
 
 ## License

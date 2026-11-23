@@ -6,6 +6,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `./pipeline`: bounded-concurrency stage runner with a strict stage/item state machine, atomic JSON snapshots (`createFilePipelineStore`) and resumable runs. Stages run in-process or on `node:worker_threads` via `worker: { entry, export }`; per-item failures are aggregated instead of aborting the batch. See [docs/guide/pipeline.md](./docs/guide/pipeline.md).
 - `dev status`: read-only report of Postgres reachability, proxy `/health` and SILO health. Down services are reported as `running: false`.
 - `describe --json` now returns the command tree in the standard envelope (`data`, `error`, `meta`); human mode keeps the pretty JSON output.
 - `createProxyHandler({ pool })` test seam, plus `parseBatchOptions` / `batchBeginStatement` exports from `./proxy`.

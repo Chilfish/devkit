@@ -40,7 +40,7 @@ afterEach(() => {
 `bun run test:coverage` uses v8 with `text-summary`, `json-summary` and `lcov` in `coverage/`.
 
 - Thresholds are a ratchet: raise them, never lower them to pass CI.
-- Current thresholds live in `vitest.config.ts`: `statements` 63, `branches` 57, `functions` 62, `lines` 64.
+- Current thresholds live in `vitest.config.ts`: `statements` 73, `branches` 65, `functions` 73, `lines` 73.
 - New logic needs tests; bug fixes start with a failing test.
 
 ## Integration opt-in

@@ -18,6 +18,7 @@ Only these changes require a document before code; everything else gets a same-d
 | [guide/usage.md](./guide/usage.md) | Daily development and repository commands | Daily work |
 | [guide/local-dev.md](./guide/local-dev.md) | Postgres, proxy and SILO: behavior, stop, reset | Local stack issues |
 | [guide/cli.md](./guide/cli.md) | `CommandSpec`, `--json`, exit codes, logs, `describe` | Adding a command |
+| [guide/pipeline.md](./guide/pipeline.md) | Bounded concurrency, stage state machine, resume and cancellation | Writing batch or CPU-bound scripts |
 
 ## Engineering
 
@@ -41,6 +42,7 @@ Only these changes require a document before code; everything else gets a same-d
 | [planning/current-state.md](./planning/current-state.md) | Audit of duplicated infrastructure in two downstream projects (2026-11-19) |
 | [planning/devkit-design.md](./planning/devkit-design.md) | Package shape, public API, migration stages and acceptance criteria |
 | [planning/oss-review-2026-11-20.md](./planning/oss-review-2026-11-20.md) | Independent review, findings and the execution backlog (2026-11-20) |
+| [planning/concurrency-framework.md](./planning/concurrency-framework.md) | Pipeline contract: concurrency, state machines, persistence and resume (2026-11-23) |
 
 ## Reference
 

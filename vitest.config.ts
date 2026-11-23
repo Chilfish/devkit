@@ -15,10 +15,10 @@ export default defineConfig({
       reportsDirectory: './coverage',
       // Ratchet: raise these, never lower them to make CI pass.
       thresholds: {
-        statements: 63,
-        branches: 57,
-        functions: 62,
-        lines: 64,
+        statements: 73,
+        branches: 65,
+        functions: 73,
+        lines: 73,
       },
     },
   },

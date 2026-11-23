@@ -1,6 +1,6 @@
 # Public API
 
-Eight typed entries plus one executable entry. `package.json#exports` and `tests/exports.test.ts` lock this matrix.
+Nine typed entries plus one executable entry. `package.json#exports` and `tests/exports.test.ts` lock this matrix.
 
 ## Entries
 
@@ -14,6 +14,7 @@ Eight typed entries plus one executable entry. `package.json#exports` and `tests
 | `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy`, `parseBatchOptions`, `batchBeginStatement` (plus `ProxyPool` for tests) | Bun |
 | `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
 | `@chilfish/devkit/commands` | `createDevCommands`, `resolveCommand`, `resolvePackageBin`, `resolveServerSpawn`, `findProjectRoot` | node |
+| `@chilfish/devkit/pipeline` | `runPipeline`, `createFilePipelineStore`, `createMemoryPipelineStore`, `WorkerPool`, state helpers, error classes | node |
 | `@chilfish/devkit/bin/proxy` | Executable background proxy entry | Bun |
 
 ## Root
@@ -83,6 +84,27 @@ import { ensureSiloRunning, ensureLocalBucket } from '@chilfish/devkit/storage'
 import { createDevCommands } from '@chilfish/devkit/commands'
 const devGroup = createDevCommands(config)
 ```
+
+## Pipeline
+
+```ts
+import { runPipeline, createFilePipelineStore } from '@chilfish/devkit/pipeline'
+
+const result = await runPipeline({
+  runId: 'ingest-2026-11-23',
+  store: createFilePipelineStore({ dir: 'temp/pipeline' }),
+  resume: true,
+  stages: [
+    { name: 'fetch', concurrency: 8, items: ids, run: id => fetchOne(id) },
+    { name: 'parse', worker: { entry: parseWorkerPath }, items: rows },
+  ],
+})
+```
+
+Bounded concurrency, a strict stage/item state machine, atomic JSON snapshots and
+resume. Worker stages run on `node:worker_threads`; the entry must be an absolute
+path or `file:` URL. Full options, state matrix and error codes:
+[guide/pipeline.md](../guide/pipeline.md).
 
 ## Contract rules
 
