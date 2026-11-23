@@ -9,7 +9,7 @@ Nine typed entries plus one executable entry. `package.json#exports` and `tests/
 | `@chilfish/devkit` | `defineDevkit`, `DevkitConfig`, `DevkitConfigError`, pure helpers | neutral |
 | `@chilfish/devkit/shared` | `isLocalUrl`, `isLocalMode`, `parseEnvContent`, `upsertEnvValues`, `localPublicBase`, `localEndpoint`, `localBucket`, `parseDatabaseInfo` | neutral |
 | `@chilfish/devkit/cli` | `CommandSpec`, `CommandGroup`, `CommandContext`, `buildCli`, `runCli`, `describeCli`, `createLogger`, `requireEnv`, `requireEnvVar`, envelope and exit helpers | node |
-| `@chilfish/devkit/env` | `loadEnvFile`, `describeEnvironment`, `readEnvFile`, `readOnlineTarget`, `applyOnlineEnv` | node |
+| `@chilfish/devkit/env` | `loadEnvFile`, `describeEnvironment`, `readEnvFile` | node |
 | `@chilfish/devkit/local` | `ensureDevServices` (with `databaseUrl` / `endpoint` overrides), `findProxyEntry`, Postgres / database / migration / env-file / proxy helpers | node |
 | `@chilfish/devkit/proxy` | `createProxyHandler`, `startProxy`, `parseBatchOptions`, `batchBeginStatement` (plus `ProxyPool` for tests) | Bun |
 | `@chilfish/devkit/storage` | `ensureSiloRunning`, `ensureLocalBucket`, `resolveSiloBinary`, `readLocalCredentials` | node |
@@ -48,10 +48,10 @@ import { buildCli, runCli, requireEnv } from '@chilfish/devkit/cli'
 ## Env
 
 ```ts
-import { loadEnvFile, describeEnvironment, readOnlineTarget, applyOnlineEnv } from '@chilfish/devkit/env'
+import { loadEnvFile, describeEnvironment } from '@chilfish/devkit/env'
 ```
 
-`readOnlineTarget({ config, cwd? })` reads `DATABASE_URL<suffix>` from the env file and refuses a local target. `applyOnlineEnv({ config, remote })` expands `<KEY><suffix>`, sets the local flag to `0`, clears local-only endpoints, and returns a restore function.
+`loadEnvFile({ config, cwd?, log? })` fills `process.env` from `env.file` and then from the mode file (`<file>.dev` when the local flag is on, `<file>.prod` when it is off). A missing mode file is skipped, later files override earlier ones, and variables already in the process environment always win.
 
 ## Local
 

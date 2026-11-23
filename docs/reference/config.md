@@ -10,9 +10,8 @@
 | `identity.description` | yes | — | Root command description |
 | `identity.helpHint` | no | `bun run <name>` | Next step shown in error hints |
 | `identity.jsonEnvVar` | no | — | Implicit JSON switch |
-| `env.file` | yes | — | Env file relative to the repository root |
+| `env.file` | no | `.env` | Base env file relative to the repository root; `<file>.dev` / `<file>.prod` are layered on top |
 | `env.localFlag` | no | `LOCAL` | Master switch variable name |
-| `env.onlineSuffix` | no | `_ONLINE` | Remote-target suffix; `''` disables expansion |
 | `database.localUrl` | yes | — | Must point at localhost / 127.0.0.1 / [::1] |
 | `database.proxyEndpoint` | yes | — | Must be a local URL |
 | `database.migrations` | yes | — | Drizzle migrations directory |
@@ -37,7 +36,8 @@ Arguments after `--` on `dev server` are appended to the first server only.
 
 ## Validation rules
 
-- `identity.name`, `identity.description`, `env.file`, `database.migrations`, server names and commands must be non-empty strings.
+- `identity.name`, `identity.description`, `database.migrations`, server names and commands must be non-empty strings.
+- `env.file` defaults to `.env`; an explicit value must be a non-empty string.
 - `database.localUrl` and `database.proxyEndpoint` must be local URLs.
 - `dev.servers` is optional and defaults to `[]`; `dev server` then fails with `NO_DEV_SERVERS` (exit 3).
 - Every server `runtime` must be `node` or `bun`; `args` must be an array of strings.
@@ -50,7 +50,7 @@ import { defineDevkit } from '@chilfish/devkit'
 
 export const devkit = defineDevkit({
   identity: { name: 'ig', description: 'Tweet viewer', jsonEnvVar: 'IG_JSON' },
-  env: { file: '.env', localFlag: 'LOCAL', onlineSuffix: '_ONLINE' },
+  env: { file: '.env', localFlag: 'LOCAL' },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/tweets_dev',
     proxyEndpoint: 'http://127.0.0.1:4444/sql',
@@ -68,4 +68,14 @@ export const devkit = defineDevkit({
 
 ## Runtime state
 
-The config is static. Runtime environment state lives in the environment file and in `process.env`; `loadEnvFile` owns that transition.
+The config is static. Runtime environment state lives in the env files and in `process.env`; `loadEnvFile` owns that transition.
+
+`loadEnvFile` reads `env.file`, then `<file>.dev` when the local flag is on or `<file>.prod` when it is off. A missing mode file is skipped. Values from the mode file override the base file, and variables already in the process environment always win.
+
+```text
+.env            # shared defaults, committed
+.env.dev        # local overrides, ignored
+.env.prod       # deployment values, injected by the platform or ignored
+```
+
+The same key appears in every file with an environment-specific value. There are no suffixed keys to rename when shipping to production: the deployment sets the local flag to `0` (or leaves it unset), and `<file>.prod` supplies the remote values.

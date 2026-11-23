@@ -33,38 +33,27 @@ The background entry is resolved by absolute path inside the package, never from
 
 `loadEnvFile` applies this order:
 
-1. Process environment wins over the file.
-2. The local flag resolves as process environment > file.
-3. Local mode: ignore `<KEY>_ONLINE`, force `DATABASE_URL` and `NEON_HTTP_ENDPOINT` to local values, derive the public media base.
-4. Remote mode: expand `<KEY><suffix>` into `<KEY>`; if `DATABASE_URL` still points at localhost, clear it and warn.
+1. Process environment wins over every file.
+2. The local flag resolves as process environment > base file.
+3. Load the base `env.file`, then the mode file: `<file>.dev` when the flag is on, `<file>.prod` when it is off. A missing mode file is skipped and later files override earlier ones.
+4. Local mode: force `DATABASE_URL` and `NEON_HTTP_ENDPOINT` to local values, derive the public media base.
+5. Remote mode: if `DATABASE_URL` still points at localhost, clear it and warn; the remote value belongs in `<file>.prod`.
 
-`ensureEnvFile({ preserveRemote: true })` saves a previous non-local `DATABASE_URL` as `DATABASE_URL<suffix>` before switching the file to local values.
+`ensureEnvFile` writes the local addresses into `<file>.dev` when that file exists, otherwise into the base file. It never touches `<file>.prod`, so localhost addresses cannot leak into a deployment file.
 
 The banner prints mode, database host/name and storage address only. It never prints credentials.
 
-## Switching one process to the remote target
+## One env file per environment
 
-`loadEnvFile` handles `*_ONLINE` at startup. When a long-running command must
-re-target a single process (publish/sync style work), use:
+Each environment keeps its own file instead of suffixed keys:
 
-```ts
-import { applyOnlineEnv, readOnlineTarget } from '@chilfish/devkit/env'
-
-const target = readOnlineTarget({ config })
-const restore = applyOnlineEnv({ config, remote: target.remote })
-try {
-  await publishTo(target.databaseUrl)
-}
-finally {
-  restore()
-}
+```text
+.env          # shared defaults, committed
+.env.dev      # local database, storage and tokens, ignored
+.env.prod     # deployment values, injected by the platform or ignored
 ```
 
-`readOnlineTarget` reads the env file only, refuses a local remote URL and
-reports missing keys with exit code 1. `applyOnlineEnv` expands
-`<KEY><suffix>`, sets the local flag to `0`, clears local-only endpoints
-(`NEON_HTTP_ENDPOINT`, `S3_ENDPOINT`, `MINIO_*`, `SILO_*`) and restores the
-previous process state when the returned function is called.
+Deployment needs no key rewriting: it sets `LOCAL=0` (or leaves it unset), and `<file>.prod` supplies the remote values under the same key names. Anything the platform injects into the process environment wins over both files.
 
 ## Postgres discovery
 

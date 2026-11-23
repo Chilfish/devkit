@@ -71,13 +71,27 @@ Expose the entry script through `package.json` so the documented `helpHint` work
 }
 ```
 
-## Environment file
+## Environment files
 
-The env module reads `env.file` and fills only keys missing from the process environment.
+Configuration uses the familiar `.env` layout instead of suffixed keys. `env.file` defaults to `.env`; a mode file is layered on top and selected by the local flag:
 
+| Flag | Files, in load order |
+|---|---|
+| `LOCAL=1` | `.env`, then `.env.dev` if it exists |
+| `LOCAL=0` / unset | `.env`, then `.env.prod` if it exists |
+
+- A missing mode file is skipped, so small projects can keep a single `.env`.
+- Later files override earlier ones; variables already set in the process environment always win.
 - With the local flag on, `DATABASE_URL`, `NEON_HTTP_ENDPOINT` and the configured public base are forced to local values.
-- With the local flag off, `<KEY>_ONLINE` values are expanded into `<KEY>`.
-- Explicit process variables always win.
+- With the local flag off, a `DATABASE_URL` that still points at localhost is cleared with a warning, so a local address never reaches the remote target.
+
+```text
+.env          # shared defaults, committed
+.env.dev      # local database, storage and tokens, ignored
+.env.prod     # deployment values, injected by the platform or ignored
+```
+
+The same key appears in each file; there is nothing to rename when shipping. Set `env.file` only when the project keeps a different filename, for example `.dev.vars` (then the mode files are `.dev.vars.dev` / `.dev.vars.prod`).
 
 ## Migrating an existing local setup
 

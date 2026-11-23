@@ -15,7 +15,7 @@ The same person reimplements the same local infrastructure across projects, and 
 | FR-2 | Configurable: all project differences injected, no project constants in source | `grep -r "ymmt\|tweets-viewer\|ymmt_dev" src/` returns nothing |
 | FR-3 | Machine contract: one-line `--json` envelope, fixed exit codes, `describe`, logs on stderr | Contract tests cover exit codes 0/1/2/3 and envelope fields |
 | FR-4 | Local chain: one command starts Postgres + database + migrations + `/sql` proxy + SILO, reused in background | Stopping the proxy then running `dev` re-starts it; `/health` database matches the target |
-| FR-5 | Environment isolation: fixed `LOCAL` / `*_ONLINE` precedence, remote mode rejects local databases | Precedence matrix unit tests; mixed state is rejected with a next step |
+| FR-5 | Environment isolation: per-environment files selected by `LOCAL`, remote mode rejects local databases | Precedence matrix unit tests; mixed state is rejected with a next step |
 | FR-6 | Runtime boundaries: Workers may import only pure entries; Node/Bun capabilities in subpaths | Entry matrix test + browser-target build assertion |
 | FR-7 | Single source of docs: guides live in devkit; downstream keeps only differences and specific troubleshooting | Downstream docs no longer copy conceptual sections |
 | FR-8 | Publishable: public npm package, peers do not force downstream upgrades | `bun pm pack --dry-run` contains only expected files; fixture install works |
@@ -48,7 +48,7 @@ src/
 ├─ index.ts                 # defineDevkit + public types; no node/bun imports
 ├─ shared/                  # Pure functions: URL checks, env parsing, local address derivation
 ├─ cli/                     # runtime / envelope / exit / logger / describe
-├─ env/                     # env file loading, LOCAL overrides, *_ONLINE expansion, banner
+├─ env/                     # env file loading, LOCAL overrides, mode-file layering, banner
 ├─ local/                   # Postgres orchestration, database, migrations, env file, stack
 ├─ proxy/                   # Neon /sql protocol translation (Bun.serve)
 ├─ storage/                 # SILO / MinIO orchestration and bucket policy
@@ -106,7 +106,6 @@ export const devkit = defineDevkit({
   env: {
     file: '.dev.vars',
     localFlag: 'LOCAL',
-    onlineSuffix: '_ONLINE',
   },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/ymmt_dev',
@@ -135,9 +134,8 @@ Field constraints:
 | `identity.description` | yes | — | Root command description |
 | `identity.helpHint` | no | `bun run <name>` | Next step in error hints |
 | `identity.jsonEnvVar` | no | — | Implicit JSON switch |
-| `env.file` | yes | — | Env file relative to the repository root |
+| `env.file` | no | `.env` | Base env file; `<file>.dev` / `<file>.prod` are layered on top |
 | `env.localFlag` | no | `LOCAL` | Master switch variable |
-| `env.onlineSuffix` | no | `_ONLINE` | Remote-target suffix; omit expansion when unset |
 | `database.localUrl` | yes | — | Database URL when local |
 | `database.proxyEndpoint` | yes | — | `/sql` proxy endpoint |
 | `database.migrations` | yes | — | Drizzle migrations directory |
@@ -179,10 +177,10 @@ const banner = describeEnvironment(process.env, devkit)
 
 Behavior:
 
-1. Read `env.file`; only fill keys missing from the process environment. Explicit variables always win.
-2. `LOCAL` precedence: process environment > file.
-3. `LOCAL=1`: ignore `*_ONLINE`, force `DATABASE_URL` / `NEON_HTTP_ENDPOINT` at local values, write `storage.publicBaseEnv` when configured.
-4. `LOCAL=0`: expand `*_ONLINE` into base keys, process environment still wins; if `DATABASE_URL` points at localhost, clear it and warn.
+1. Read `env.file`, then the mode file (`<file>.dev` when the local flag is on, `<file>.prod` when it is off); fill only keys missing from the process environment. Explicit variables always win.
+2. `LOCAL` precedence: process environment > base file.
+3. `LOCAL=1`: force `DATABASE_URL` / `NEON_HTTP_ENDPOINT` at local values, write `storage.publicBaseEnv` when configured.
+4. `LOCAL=0`: the mode file supplies remote values under the same keys; if `DATABASE_URL` still points at localhost, clear it and warn.
 5. The banner prints only mode, database host/name and local bucket address; never credentials.
 
 `isLocalUrl` recognizes `localhost` / `127.0.0.1` / `[::1]`; no fuzzy matching.
@@ -200,7 +198,7 @@ Also exported individually:
 - `ensurePostgresRunning()`: reuse a running instance; attach the log tail on failure.
 - `ensureDatabase()`: create the database after a name whitelist check.
 - `applyMigrations()`: uses `config.database.migrations`.
-- `ensureEnvFile()`: touches only declared keys, preserving comments, blank lines and other lines (including `*_ONLINE`).
+- `ensureEnvFile()`: touches only declared keys, preserving comments, blank lines and other lines; writes `<file>.dev` (or the base file) and never `<file>.prod`.
 
 ### 6.5 Proxy
 
@@ -346,7 +344,7 @@ The downstream must remain runnable at every stage; two implementations must not
 
 | Layer | Coverage | Trigger |
 |---|---|---|
-| Unit | Config validation, env precedence matrix (process/file/`LOCAL`), `*_ONLINE` expansion and restore, env-file order preservation, URL checks, banner redaction, envelope and exit codes, help text | Every `bun run check` |
+| Unit | Config validation, env precedence matrix (process/base file/mode file/`LOCAL`), mode-file layering, env-file order preservation, URL checks, banner redaction, envelope and exit codes, help text | Every `bun run check` |
 | Integration | Temporary database creation + migration, proxy single/batch query, `/health`, port conflict detection; SILO optional | `DEVKIT_PG_SMOKE=1`; CI with a Postgres service |
 | Contract | Entry matrix shape, `./shared` browser-target build, `package.json#exports` locked with tests | Every CI run |
 | Downstream smoke | Both downstreams' `check` / `build` / local chain | Before release; PRs upgrading peers |
@@ -386,14 +384,14 @@ Never copy the body of the parameterized guides into downstream docs; delete the
 | Bun-only proxy | Node script projects cannot use it | Document it; Node support is an open question |
 | Windows background processes (`cmd start`, fd inheritance) | Proxy / SILO fail to start | Keep the existing implementation; print the log tail; integration smoke covers "auto-start when not running" |
 | Dual sources during migration | Fix one, miss the other | Delete local copies immediately after S2/S3; no temporary retention |
-| Env semantic differences (`.dev.vars` + `*_ONLINE` vs `.env` + `DATABASE_URL_REMOTE`) | Forcing unification breaks downstreams | Parameterize; decide after a third project |
+| Env semantic differences (downstream `.env` + `DATABASE_URL_REMOTE` vs devkit `<file>.prod`) | Forcing unification breaks downstreams | Per-environment files; downstream maps `_REMOTE` to `<file>.prod` during migration |
 | Over-abstraction | Heavy package, unstable API | Reuse only capabilities seen twice; new capabilities start with a design and a downstream use case |
 | Docs drift again | Two guides | Downstream keeps differences only; review checks for copied conceptual sections |
 
 ## 14. Open questions
 
 1. Does `./proxy` need Node support (`node:http`)? Trigger: a non-Bun script project.
-2. Should `*_ONLINE` and `DATABASE_URL_REMOTE` be unified? Leaning no, wait for a third consumer.
+2. Should downstream `DATABASE_URL_REMOTE` map to `<file>.prod` or stay a project-local convention? Leaning: map to `<file>.prod` during S3.
 3. Should remote object-storage resolution (R2 credentials, CDN prefix) enter the package? Semantics differ; not yet.
 4. Passthrough semantics for multiple `dev server` processes: is `--target <name>` needed?
 5. Should `devkit doctor` exist (pg / silo / port / env-file consistency)? Leaning 0.2.

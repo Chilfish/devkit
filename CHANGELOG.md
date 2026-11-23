@@ -15,6 +15,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Breaking**: environment layering uses one file per environment instead of suffixed keys. `loadEnvFile` reads `env.file` (now defaulting to `.env`), then `<file>.dev` when the local flag is on or `<file>.prod` when it is off; a missing mode file is skipped, later files override earlier ones and process variables still win.
+- **Breaking**: removed `env.onlineSuffix`, `readOnlineTarget`, `applyOnlineEnv` and the `<KEY>_ONLINE` expansion. Remote values come from `<file>.prod` or the process environment under the same key names, so shipping to production needs no key rewriting.
+- **Breaking**: removed `ensureEnvFile({ preserveRemote })` and `ensureDevServices({ preserveRemote })`; `ensureEnvFile` writes local addresses into `<file>.dev` (or the base file) and never touches `<file>.prod`.
 - `dev.servers` is optional and defaults to `[]`; `dev server` then fails with `NO_DEV_SERVERS` (exit 3) instead of rejecting the config.
 - `dev server --json` routes child stdout to stderr, so stdout keeps exactly one envelope line.
 - `resolveServerSpawn` resolves `node_modules` from the nearest package root instead of `process.cwd()`.

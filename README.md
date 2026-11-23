@@ -7,6 +7,7 @@ One source, many consumers. Project differences are injected through a single `d
 ## Features
 
 - **Single implementation** — CLI runtime, env layering, local services and storage are consumed as a dependency instead of being copied.
+- **Environment files, not suffixed keys** — `.env` plus `.env.dev` / `.env.prod` selected by the local flag; the same key holds a different value per environment.
 - **Configuration only** — names, file paths, database URLs, buckets and dev servers come from `defineDevkit`.
 - **Machine contract** — `--json` emits a one-line envelope, exit codes are fixed, logs go to stderr, and `describe` prints the whole command tree.
 - **Local stack** — one command starts Postgres, creates the database, applies migrations, starts the `/sql` proxy and SILO, then reuses them on the next run. `dev status` reports the current state without changing anything.
@@ -42,7 +43,7 @@ export const devkit = defineDevkit({
     helpHint: 'bun run ymmt',
     jsonEnvVar: 'YMMT_JSON',
   },
-  env: { file: '.dev.vars' },
+  env: { file: '.env' },
   database: {
     localUrl: 'postgres://postgres@localhost:5432/ymmt_dev',
     proxyEndpoint: 'http://127.0.0.1:4444/sql',
