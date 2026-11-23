@@ -2,7 +2,7 @@
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [SemVer](https://semver.org/).
 
-## Unreleased
+## 0.2.0
 
 ### Added
 
@@ -24,7 +24,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - `resolveServerSpawn` resolves `node_modules` from the nearest package root instead of `process.cwd()`.
 - Windows `.cmd` / `.bat` servers run through `cmd.exe /d /s /c` with quoted arguments instead of `shell: true`.
 - Proxy and SILO background processes use one `spawnDetached` helper.
-- CI adds a Postgres integration job and a Windows job; coverage thresholds (63 / 57 / 62 / 64) are enforced.
+- CI adds a Postgres integration job and a Windows job; coverage thresholds (73 / 65 / 73 / 73) are enforced.
 - `scripts/verify-package.mjs` derives artifact checks from `package.json#exports` and supports npm 12's `pack --json` shape.
 
 ### Fixed
