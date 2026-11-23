@@ -7,12 +7,17 @@ describe('defineDevkit', () => {
     const config = defineDevkit(createConfigInput())
 
     expect(config.identity.helpHint).toBe('bun run devkit-test')
+    expect(config.env.file).toBe('.dev.vars')
     expect(config.env.localFlag).toBe('LOCAL')
-    expect(config.env.onlineSuffix).toBe('_ONLINE')
     expect(config.storage.dataDir).toBe('temp/silo-data')
     expect(config.paths.logs).toBe('logs')
     expect(config.dev.servers[0]?.runtime).toBe('node')
     expect(config.dev.servers[0]?.args).toEqual(['dev'])
+  })
+
+  it('defaults the env file to .env when omitted', () => {
+    const config = defineDevkit(createConfigInput({ env: {} }))
+    expect(config.env.file).toBe('.env')
   })
 
   it('keeps explicit values', () => {
@@ -23,7 +28,7 @@ describe('defineDevkit', () => {
         helpHint: 'bun run ymmt',
         jsonEnvVar: 'YMMT_JSON',
       },
-      env: { file: '.env', localFlag: 'IS_LOCAL', onlineSuffix: '' },
+      env: { file: '.env.local', localFlag: 'IS_LOCAL' },
       paths: { logs: 'temp' },
       dev: {
         servers: [
@@ -35,7 +40,7 @@ describe('defineDevkit', () => {
     expect(config.identity.helpHint).toBe('bun run ymmt')
     expect(config.identity.jsonEnvVar).toBe('YMMT_JSON')
     expect(config.env.localFlag).toBe('IS_LOCAL')
-    expect(config.env.onlineSuffix).toBe('')
+    expect(config.env.file).toBe('.env.local')
     expect(config.paths.logs).toBe('temp')
     expect(config.dev.servers[0]?.runtime).toBe('bun')
     expect(config.dev.servers[0]?.args).toEqual([])

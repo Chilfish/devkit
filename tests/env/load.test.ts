@@ -18,8 +18,8 @@ function snapshotEnv(): () => void {
   }
 }
 
-function writeEnv(dir: string, content: string): void {
-  writeFileSync(join(dir, config.env.file), content)
+function writeEnv(dir: string, content: string, name = config.env.file): void {
+  writeFileSync(join(dir, name), content)
 }
 
 let restoreEnv: () => void
@@ -30,9 +30,7 @@ beforeEach(() => {
   for (const key of [
     'LOCAL',
     'DATABASE_URL',
-    'DATABASE_URL_ONLINE',
     'NEON_HTTP_ENDPOINT',
-    'NEON_HTTP_ENDPOINT_ONLINE',
     'PUBLIC_BASE',
     'R2_BUCKET',
     'S3_ENDPOINT',
@@ -57,18 +55,15 @@ describe('loadEnvFile', () => {
     expect(process.env.B).toBe('process')
   })
 
-  it('resolves the local flag as process environment > file', () => {
-    writeEnv(dir, [
-      'LOCAL=1',
-      'DATABASE_URL=postgres://postgres@localhost:5432/file_db',
-      'DATABASE_URL_ONLINE=postgres://user@db.example.com:5432/remote',
-    ].join('\n'))
+  it('resolves the local flag as process environment > base file', () => {
+    writeEnv(dir, 'LOCAL=1\nDATABASE_URL=postgres://postgres@localhost:5432/file_db\n')
+    writeEnv(dir, 'DATABASE_URL=postgres://user@db.example.com:5432/remote\n', '.dev.vars.prod')
 
     loadEnvFile({ config, cwd: dir, log: false })
     expect(process.env.LOCAL).toBe('1')
     expect(process.env.DATABASE_URL).toBe('postgres://postgres@localhost:5432/file_db')
 
-    // A process-level flag wins over the file, so the remote target is expanded.
+    // A process-level flag wins over the file, so the prod file applies.
     delete process.env.DATABASE_URL
     process.env.LOCAL = '0'
     loadEnvFile({ config, cwd: dir, log: false })
@@ -77,17 +72,73 @@ describe('loadEnvFile', () => {
     expect(process.env.DATABASE_URL).toBe('postgres://user@db.example.com:5432/remote')
   })
 
+  it('layers <file>.dev over the base file in local mode', () => {
+    process.env.LOCAL = '1'
+    writeEnv(dir, 'DATABASE_URL=postgres://user@db.example.com/base\nSHARED=base\n')
+    writeEnv(dir, 'SHARED=dev\nEXTRA=dev\n', '.dev.vars.dev')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.SHARED).toBe('dev')
+    expect(process.env.EXTRA).toBe('dev')
+    expect(process.env.DATABASE_URL).toBe(config.database.localUrl)
+  })
+
+  it('layers <file>.prod over the base file in remote mode', () => {
+    process.env.LOCAL = '0'
+    writeEnv(dir, 'DATABASE_URL=postgres://user@db.example.com/base\nSHARED=base\n')
+    writeEnv(dir, 'DATABASE_URL=postgres://user@prod.example.com/prod\nSHARED=prod\n', '.dev.vars.prod')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.DATABASE_URL).toBe('postgres://user@prod.example.com/prod')
+    expect(process.env.SHARED).toBe('prod')
+  })
+
+  it('ignores the opposite mode file', () => {
+    process.env.LOCAL = '0'
+    writeEnv(dir, 'EXTRA=dev\n', '.dev.vars.dev')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.EXTRA).toBeUndefined()
+  })
+
+  it('lets explicit process variables win over mode files', () => {
+    process.env.LOCAL = '0'
+    process.env.DATABASE_URL = 'postgres://user@db.example.com:5432/explicit'
+    writeEnv(dir, 'DATABASE_URL=postgres://user@prod.example.com/prod\n', '.dev.vars.prod')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.DATABASE_URL).toBe('postgres://user@db.example.com:5432/explicit')
+  })
+
+  it('falls back to the base file when the mode file is missing', () => {
+    process.env.LOCAL = '0'
+    writeEnv(dir, 'DATABASE_URL=postgres://user@db.example.com/base\n')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.DATABASE_URL).toBe('postgres://user@db.example.com/base')
+  })
+
+  it('clears a local database in remote mode when no prod file exists', () => {
+    process.env.LOCAL = '0'
+    writeEnv(dir, 'DATABASE_URL=postgres://postgres@localhost:5432/local\n')
+
+    loadEnvFile({ config, cwd: dir, log: false })
+
+    expect(process.env.DATABASE_URL).toBeUndefined()
+  })
+
   describe('local mode', () => {
     beforeEach(() => {
       process.env.LOCAL = '1'
     })
 
-    it('ignores remote targets and forces local addresses', () => {
-      writeEnv(dir, [
-        'DATABASE_URL_ONLINE=postgres://user@db.example.com:5432/remote',
-        'NEON_HTTP_ENDPOINT_ONLINE=https://proxy.example.com/sql',
-        'PUBLIC_BASE=https://cdn.example.com',
-      ].join('\n'))
+    it('forces local addresses and derives the public base', () => {
+      writeEnv(dir, 'PUBLIC_BASE=https://cdn.example.com\n')
 
       loadEnvFile({ config, cwd: dir, log: false })
 
@@ -105,51 +156,6 @@ describe('loadEnvFile', () => {
       process.env.DATABASE_URL = 'postgres://user@db.example.com/app'
       loadEnvFile({ config, cwd: dir, log: false })
       expect(process.env.DATABASE_URL).toBe(config.database.localUrl)
-    })
-  })
-
-  describe('remote mode', () => {
-    beforeEach(() => {
-      process.env.LOCAL = '0'
-    })
-
-    it('expands *_ONLINE into base keys', () => {
-      writeEnv(dir, [
-        'DATABASE_URL=postgres://postgres@localhost:5432/local',
-        'DATABASE_URL_ONLINE=postgres://user@db.example.com:5432/remote',
-      ].join('\n'))
-
-      loadEnvFile({ config, cwd: dir, log: false })
-
-      expect(process.env.DATABASE_URL).toBe('postgres://user@db.example.com:5432/remote')
-    })
-
-    it('keeps explicitly set base keys', () => {
-      process.env.DATABASE_URL = 'postgres://user@db.example.com:5432/explicit'
-      writeEnv(dir, 'DATABASE_URL_ONLINE=postgres://user@db.example.com:5432/remote\n')
-
-      loadEnvFile({ config, cwd: dir, log: false })
-
-      expect(process.env.DATABASE_URL).toBe('postgres://user@db.example.com:5432/explicit')
-    })
-
-    it('clears a local database when no remote target exists', () => {
-      writeEnv(dir, 'DATABASE_URL=postgres://postgres@localhost:5432/local\n')
-
-      loadEnvFile({ config, cwd: dir, log: false })
-
-      expect(process.env.DATABASE_URL).toBeUndefined()
-    })
-
-    it('does not expand when the suffix is empty', () => {
-      const noSuffix = createConfig({
-        env: { file: '.dev.vars', onlineSuffix: '' },
-      })
-      process.env.DATABASE_URL_ONLINE = 'postgres://user@db.example.com:5432/remote'
-
-      loadEnvFile({ config: noSuffix, cwd: dir, log: false })
-
-      expect(process.env.DATABASE_URL).toBeUndefined()
     })
   })
 
@@ -189,5 +195,28 @@ describe('describeEnvironment', () => {
     const text = describeEnvironment({ LOCAL: '1', DATABASE_URL: 'postgres://user:secret@localhost:5432/app' }, config)
     expect(text).not.toContain('secret')
     expect(text).not.toContain('user')
+  })
+
+  it('describes remote R2 storage when a bucket is set', () => {
+    const text = describeEnvironment({ LOCAL: '0', DATABASE_URL: 'postgres://user@db.example.com/app', R2_BUCKET: 'remote' }, config)
+    expect(text).toContain('R2 storage remote')
+  })
+
+  it('prints the banner to stderr unless logging is disabled', () => {
+    const chunks: string[] = []
+    const write = process.stderr.write.bind(process.stderr)
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+      chunks.push(String(chunk))
+      return true
+    }) as typeof process.stderr.write
+
+    try {
+      loadEnvFile({ config, cwd: dir })
+    }
+    finally {
+      process.stderr.write = write
+    }
+
+    expect(chunks.join('')).toContain('[env]')
   })
 })

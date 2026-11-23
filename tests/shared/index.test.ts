@@ -78,9 +78,9 @@ describe('parseEnvContent', () => {
 
 describe('upsertEnvValues', () => {
   it('overwrites existing keys and preserves everything else', () => {
-    const content = '# header\nDATABASE_URL=old\nLOCAL=0\nDATABASE_URL_ONLINE=remote\n\nOTHER=keep\n'
+    const content = '# header\nDATABASE_URL=old\nLOCAL=0\nMODE=prod\n\nOTHER=keep\n'
     expect(upsertEnvValues(content, { DATABASE_URL: 'new', LOCAL: '1' })).toBe(
-      '# header\nDATABASE_URL=new\nLOCAL=1\nDATABASE_URL_ONLINE=remote\n\nOTHER=keep\n',
+      '# header\nDATABASE_URL=new\nLOCAL=1\nMODE=prod\n\nOTHER=keep\n',
     )
   })
 

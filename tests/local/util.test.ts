@@ -4,8 +4,15 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   buildWindowsCommandLine,
+  commandOutput,
+  findBinary,
+  firstExisting,
+  isPortOpen,
+  listDir,
   quoteWindowsArgument,
   readLogTail,
+  resolveLogPath,
+  sleep,
   spawnDetached,
 } from '../../src/local/util'
 
@@ -84,4 +91,72 @@ describe('spawnDetached', () => {
 
     expect(readLogTail(logFile)).toContain('detached-ok')
   }, 20_000)
+})
+
+describe('filesystem helpers', () => {
+  it('lists a directory and returns an empty array for a missing one', () => {
+    const dir = tempDir()
+    writeFileSync(join(dir, 'a.txt'), '')
+    expect(listDir(dir).map(name => name.replace(`${dir}\\`, '').replace(`${dir}/`, ''))).toEqual(['a.txt'])
+    expect(listDir(join(dir, 'missing'))).toEqual([])
+  })
+
+  it('returns the first existing path', () => {
+    const dir = tempDir()
+    const existing = join(dir, 'exists')
+    writeFileSync(existing, '')
+    expect(firstExisting([
+      undefined,
+      join(dir, 'nope'),
+      existing,
+    ])).toBe(existing)
+    expect(firstExisting([
+      undefined,
+      join(dir, 'nope'),
+    ])).toBeUndefined()
+  })
+
+  it('finds a binary across directories', () => {
+    const dir = tempDir()
+    writeFileSync(join(dir, 'tool.exe'), '')
+    expect(findBinary([dir, undefined], ['tool.exe'])).toBe(join(dir, 'tool.exe'))
+    expect(findBinary([dir], ['other.exe'])).toBeUndefined()
+  })
+
+  it('creates the parent directory for a log path', () => {
+    const dir = tempDir()
+    const path = resolveLogPath(join(dir, 'logs'), 'service.log')
+    expect(path).toBe(join(dir, 'logs', 'service.log'))
+    expect(listDir(join(dir, 'logs'))).toEqual([])
+  })
+})
+
+describe('commandOutput', () => {
+  it('returns trimmed stdout for a successful command', () => {
+    const dir = tempDir()
+    const script = join(dir, 'print.cjs')
+    writeFileSync(script, 'console.log("  value  ")\n')
+    expect(commandOutput(process.execPath, [script])).toBe('value')
+  })
+
+  it('returns undefined for a failing command', () => {
+    const dir = tempDir()
+    const script = join(dir, 'fail.cjs')
+    writeFileSync(script, 'process.exit(1)\n')
+    expect(commandOutput(process.execPath, [script])).toBeUndefined()
+  })
+})
+
+describe('isPortOpen', () => {
+  it('reports false for a closed port', async () => {
+    expect(await isPortOpen('127.0.0.1', 1, 200)).toBe(false)
+  })
+})
+
+describe('sleep', () => {
+  it('resolves after the delay', async () => {
+    const start = Date.now()
+    await sleep(20)
+    expect(Date.now() - start).toBeGreaterThanOrEqual(15)
+  })
 })
